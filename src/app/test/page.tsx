@@ -293,7 +293,7 @@ export default function TestPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="relative mx-auto aspect-video w-full overflow-hidden rounded-2xl border border-border bg-background lg:mx-0 lg:w-screen lg:max-w-none">
+              <div className="relative mx-auto aspect-video w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-background">
                 <div className="absolute inset-0 flex items-center justify-center">
                   {/* Circular eye-field background (case 4) — the optotype
                       moves inside this field, not a square. */}
