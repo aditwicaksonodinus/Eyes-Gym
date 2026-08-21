@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@radix-ui/react-progress": "^1.1.16",
     "@radix-ui/react-slot": "^1.3.3",
+    "@serwist/next": "^9.5.12",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "11.3.19",
@@ -40,6 +42,7 @@
     "eslint-config-next": "14.2.5",
     "jsdom": "^29.1.1",
     "postcss": "8.4.40",
+    "serwist": "^9.5.12",
     "tailwindcss": "3.4.7",
     "typescript": "5.5.4",
     "vitest": "^1.6.1"
