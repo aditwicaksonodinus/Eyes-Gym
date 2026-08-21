@@ -47,25 +47,66 @@ export function creditCardPxToMm(pxWidth: number, devicePxPerMm: number): number
 }
 
 /**
+ * Options for {@link computeLetterPx}.
+ */
+export interface ComputeLetterPxOptions {
+  /**
+   * Readable on-screen size (px) of a logMAR-0 letter for the *reference*
+   * setup (a typical 96-DPI screen at 40 cm). The physically-correct letter
+   * height at that setup is only ~2 px, so we map it up to this readable base
+   * and let calibration + logMAR modulate around it. Default 100.
+   */
+  basePx?: number;
+  /** Floor so a letter is never invisible (px). Default 24. */
+  minPx?: number;
+  /** Ceiling so a letter never overflows the card (px). Default 140. */
+  maxPx?: number;
+}
+
+/** Reference px-per-mm: a typical 96-DPI screen (96 / 25.4). */
+const REF_PX_PER_MM = 96 / 25.4;
+/** Reference test distance (mm): 40 cm. */
+const REF_DISTANCE_MM = 400;
+
+/**
  * Compute the letter/optotype height in device px for a given test distance
  * and logMAR acuity, using the 5-arcminute-per-letter convention of a 20/20
  * (logMAR 0) line.
  *
  * A 20/20 letter subtends 5 arcminutes at the test distance; the referenced
- * 2.5' is the half-angle. Standard Snellen small-angle formula:
- *   letterPx = 2 · distanceMm · tan(2.5′) · pxPerMm
- * Larger logMAR (worse acuity) scales the letter by `10^logMAR`
- * (the 0.1-logMAR-per-doubling-convention).
+ * 2.5' is the half-angle. The *physically-correct* height at a normal viewing
+ * distance is only ~1–2 px on screen — mathematically right but invisible. To
+ * keep the optotype readable we map that physical value onto a readable base
+ * size (`basePx`) computed for a reference setup, then let the user's own
+ * calibration (distanceMm, pxPerMm) and the acuity level (logMAR) modulate it:
+ *
+ *   physicalPx = 2 · distanceMm · tan(2.5′) · pxPerMm
+ *   scale      = basePx / (2 · REF_DISTANCE_MM · tan(2.5′) · REF_PX_PER_MM)
+ *   letterPx   = clamp(physicalPx · scale · 10^logMAR, minPx, maxPx)
+ *
+ * Worse acuity (higher logMAR) → larger letter (10^logMAR > 1); better acuity
+ * (lower logMAR) → smaller letter. A floor (`minPx`) guarantees the glyph is
+ * always drawn, and a ceiling (`maxPx`) keeps it on-screen.
  */
 export function computeLetterPx(
   distanceMm: number,
   pxPerMm: number,
   logMAR: number,
+  opts: ComputeLetterPxOptions = {},
 ): number {
+  const basePx = opts.basePx ?? 100;
+  const minPx = opts.minPx ?? 24;
+  const maxPx = opts.maxPx ?? 140;
+
   const halfAngleRad = HALF_ANGLE_ARCMIN * ARCMIN_RAD;
-  const baseLetterMm = 2 * distanceMm * Math.tan(halfAngleRad);
+  const physicalPx = 2 * distanceMm * Math.tan(halfAngleRad) * pxPerMm;
+  const refPhysicalPx =
+    2 * REF_DISTANCE_MM * Math.tan(halfAngleRad) * REF_PX_PER_MM;
+  const scale = basePx / refPhysicalPx;
+
   const acuityScale = 10 ** logMAR;
-  return baseLetterMm * pxPerMm * acuityScale;
+  const raw = physicalPx * scale * acuityScale;
+  return Math.min(maxPx, Math.max(minPx, raw));
 }
 
 /**

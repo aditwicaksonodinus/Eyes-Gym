@@ -1,5 +1,11 @@
 /// <reference types="vitest/globals" />
-import { createAcuityTest } from "./acuity";
+import {
+  createAcuityTest,
+  toSnellenFraction,
+  toSnellenSix,
+  toDecimal,
+  bandForLogMAR,
+} from "./acuity";
 
 /**
  * Hand-computed reference for the scripted mixed sequence below.
@@ -107,5 +113,90 @@ describe("createAcuityTest — state + stop rule", () => {
     const before = t.getState().answers.length;
     t.answer(true);
     expect(t.getState().answers.length).toBe(before);
+  });
+});
+
+describe("createAcuityTest — robustness / edge cases", () => {
+  it("all-correct run terminates and reports a finite, non-NaN result", () => {
+    const t = createAcuityTest();
+    for (let i = 0; i < 8; i++) t.answer(true);
+    const r = t.result();
+    expect(Number.isFinite(r.logMAR)).toBe(true);
+    expect(Number.isNaN(r.logMAR)).toBe(false);
+    expect(r.snellenFraction).toMatch(/^20\/\d+$/);
+    expect(r.snellenSix).toMatch(/^6\/\d+$/);
+    expect(Number.isFinite(r.decimal)).toBe(true);
+  });
+
+  it("all-incorrect run terminates and reports a finite, non-NaN result", () => {
+    const t = createAcuityTest();
+    for (let i = 0; i < 11; i++) t.answer(false);
+    const r = t.result();
+    expect(Number.isFinite(r.logMAR)).toBe(true);
+    expect(r.snellenFraction).toBe("20/200");
+    expect(r.band).toBe("Perlu pemeriksaan");
+  });
+
+  it("is deterministic: identical input sequences yield identical results", () => {
+    const seq = [true, false, true, true, false, false, true, false, true];
+    const run = () => {
+      const t = createAcuityTest();
+      for (const c of seq) t.answer(c);
+      return t.result();
+    };
+    const a = run();
+    const b = run();
+    expect(a.logMAR).toBe(b.logMAR);
+    expect(a.snellenFraction).toBe(b.snellenFraction);
+    expect(a.decimal).toBe(b.decimal);
+    expect(a.band).toBe(b.band);
+  });
+
+  it("boundary logMAR -0.3 (best) → 20/10, Normal", () => {
+    const t = createAcuityTest();
+    for (let i = 0; i < 4; i++) t.answer(true); // pins at -0.3
+    const r = t.result();
+    expect(r.logMAR).toBe(-0.3);
+    expect(r.snellenFraction).toBe("20/10");
+    expect(r.band).toBe("Normal");
+  });
+
+  it("boundary logMAR 1.0 (worst) → 20/200, Perlu pemeriksaan", () => {
+    const t = createAcuityTest();
+    for (let i = 0; i < 11; i++) t.answer(false); // pins at 1.0
+    const r = t.result();
+    expect(r.logMAR).toBe(1.0);
+    expect(r.snellenFraction).toBe("20/200");
+    expect(r.band).toBe("Perlu pemeriksaan");
+  });
+
+  it("boundary logMAR 0.1 → Normal (inclusive upper bound)", () => {
+    const t = createAcuityTest();
+    t.answer(false); // 0.0 -> 0.1, no reversal -> final clamped 0.1
+    expect(t.result().band).toBe("Normal");
+    expect(t.result().logMAR).toBe(0.1);
+  });
+});
+
+describe("acuity conversion helpers — never NaN/undefined", () => {
+  it("toSnellenFraction guards non-finite input", () => {
+    expect(toSnellenFraction(NaN)).toBe("20/20");
+    expect(toSnellenFraction(Infinity)).toBe("20/20");
+    expect(toSnellenFraction(-Infinity)).toBe("20/20");
+  });
+
+  it("toSnellenSix guards non-finite input", () => {
+    expect(toSnellenSix(NaN)).toBe("6/6");
+    expect(toSnellenSix(Infinity)).toBe("6/6");
+  });
+
+  it("toDecimal guards non-finite input", () => {
+    expect(Number.isFinite(toDecimal(NaN))).toBe(true);
+    expect(toDecimal(NaN)).toBe(1);
+  });
+
+  it("bandForLogMAR guards non-finite input", () => {
+    expect(bandForLogMAR(NaN)).toBe("Normal");
+    expect(bandForLogMAR(Infinity)).toBe("Normal");
   });
 });

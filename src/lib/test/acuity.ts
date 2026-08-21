@@ -74,22 +74,31 @@ const DEFAULTS = {
   maxReversals: 6,
 } as const;
 
+/** Coerce a possibly-NaN/non-finite logMAR to a safe finite value (0). */
+function safeLogMAR(v: number): number {
+  return Number.isFinite(v) ? v : 0;
+}
+
 /** Map an estimated logMAR to a plain-language screening band. */
 export function bandForLogMAR(logMAR: number): string {
-  if (logMAR <= 0.1) return "Normal";
-  if (logMAR <= 0.4) return "Ringan";
+  const safe = safeLogMAR(logMAR);
+  if (safe <= 0.1) return "Normal";
+  if (safe <= 0.4) return "Ringan";
   return "Perlu pemeriksaan";
 }
 
 /** Pure conversion helpers (exported for reuse / direct testing). */
 export function toSnellenFraction(logMAR: number): string {
-  return "20/" + Math.round(20 * 10 ** logMAR);
+  const safe = safeLogMAR(logMAR);
+  return "20/" + Math.round(20 * 10 ** safe);
 }
 export function toSnellenSix(logMAR: number): string {
-  return "6/" + Math.round(6 * 10 ** logMAR);
+  const safe = safeLogMAR(logMAR);
+  return "6/" + Math.round(6 * 10 ** safe);
 }
 export function toDecimal(logMAR: number): number {
-  return 10 ** -logMAR;
+  const safe = safeLogMAR(logMAR);
+  return 10 ** -safe;
 }
 
 /**
@@ -164,6 +173,10 @@ export function createAcuityTest(opts: AcuityOptions = {}) {
       // ≤1 reversal (monotonic / bound-pinned run): report final clamped logMAR.
       estLogMAR = logMAR;
     }
+
+    // Guard against any non-finite estimate (defensive; should never happen
+    // with the clamped staircase, but guarantees a usable result).
+    if (!Number.isFinite(estLogMAR)) estLogMAR = 0;
 
     return {
       logMAR: estLogMAR,

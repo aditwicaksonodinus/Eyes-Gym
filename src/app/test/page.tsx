@@ -62,6 +62,10 @@ export default function TestPage() {
   const engineRef = React.useRef<ReturnType<typeof createAcuityTest> | null>(
     null,
   );
+  // Synchronous mirror of the active eye. Updated in lockstep with `engineRef`
+  // so eye attribution can never race a re-render (a fast second click must not
+  // be mis-attributed to the wrong eye after one eye finishes).
+  const sideRef = React.useRef<EyeSide>("left");
   const [currentSide, setCurrentSide] = React.useState<EyeSide>("left");
   const [letterIndex, setLetterIndex] = React.useState(0);
   const [leftLogMAR, setLeftLogMAR] = React.useState<number | null>(null);
@@ -71,6 +75,7 @@ export default function TestPage() {
 
   const startEye = React.useCallback((side: EyeSide) => {
     engineRef.current = createAcuityTest();
+    sideRef.current = side;
     setCurrentSide(side);
     setLetterIndex(0);
   }, []);
@@ -88,8 +93,8 @@ export default function TestPage() {
       if (!engine) return;
       const state = engine.answer(correct);
       if (state.done) {
-        const res: AcuityResult = engine.result();
-        const side = currentSide;
+      const res: AcuityResult = engine.result();
+      const side = sideRef.current;
         useAppStore.getState().setEyeResult(side, "phone", {
           snellen: res.snellenFraction,
           distance: effDistanceMm / 1000,

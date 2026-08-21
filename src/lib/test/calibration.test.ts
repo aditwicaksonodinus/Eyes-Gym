@@ -33,43 +33,69 @@ describe("physicalPpiToPxPerMm", () => {
 });
 
 describe("computeLetterPx", () => {
-  const SIX_M_MM = 6000;
+  // Default page inputs: 40 cm (400 mm) and a 200 px credit-card reading
+  // (200 / 85.6 ≈ 2.336 px/mm). The starting logMAR-0 letter must be readable.
+  const PAGE_DISTANCE_MM = 400;
+  const PAGE_PX_PER_MM = 200 / 85.6;
 
-  it("a 20/20 (logMAR 0) letter at 6 m subtends 5 arcminutes", () => {
-    const pxPerMm = 10;
-    const expected = 2 * SIX_M_MM * Math.tan(TWO_POINT_FIVE_ARCMIN_RAD) * pxPerMm;
-    expect(computeLetterPx(SIX_M_MM, pxPerMm, 0)).toBeCloseTo(expected, 2);
+  it("a logMAR-0 letter at the default page setup is clearly readable (~60–120px)", () => {
+    const px = computeLetterPx(PAGE_DISTANCE_MM, PAGE_PX_PER_MM, 0);
+    expect(px).toBeGreaterThanOrEqual(50);
+    expect(px).toBeLessThanOrEqual(130);
   });
 
-  it("scales linearly with px-per-mm", () => {
-    const half = computeLetterPx(SIX_M_MM, 5, 0);
-    const full = computeLetterPx(SIX_M_MM, 10, 0);
+  it("scales with 10^logMAR: worse acuity → larger letter", () => {
+    const base = computeLetterPx(400, 2, 0);
+    const worse = computeLetterPx(400, 2, 0.3);
+    expect(worse).toBeGreaterThan(base);
+    expect(worse).toBeCloseTo(base * 10 ** 0.3, 1);
+  });
+
+  it("better acuity (logMAR -0.3) is smaller than logMAR 0 but still visible", () => {
+    const best = computeLetterPx(400, 2, -0.3);
+    const base = computeLetterPx(400, 2, 0);
+    expect(best).toBeLessThan(base);
+    expect(best).toBeGreaterThanOrEqual(24);
+  });
+
+  it("scales linearly with px-per-mm (within caps)", () => {
+    const half = computeLetterPx(400, 2, 0);
+    const full = computeLetterPx(400, 4, 0);
     expect(full).toBeCloseTo(half * 2, 6);
   });
 
-  it("doubling the distance roughly doubles the letter px (same logMAR)", () => {
-    const near = computeLetterPx(SIX_M_MM, 10, 0);
-    const far = computeLetterPx(SIX_M_MM * 2, 10, 0);
-    expect(far).toBeCloseTo(near * 2, 1);
+  it("calibration (distance) feeds the size: farther → larger letter", () => {
+    const near = computeLetterPx(300, 2, 0);
+    const far = computeLetterPx(600, 2, 0);
+    expect(far).toBeGreaterThan(near);
   });
 
-  it("logMAR 0.3 yields roughly 2× the logMAR 0 letter (0.1 logMAR ≈ 1.2589×)", () => {
-    const base = computeLetterPx(SIX_M_MM, 10, 0);
-    const worse = computeLetterPx(SIX_M_MM, 10, 0.3);
-    // 10^0.3 ≈ 1.995; assert within ±2%
-    expect(worse).toBeCloseTo(base * 10 ** 0.3, 1);
-    expect(worse).toBeGreaterThan(base);
+  it("never returns NaN, negative, zero, or non-finite for normal inputs", () => {
+    for (const lm of [-0.3, 0, 0.1, 0.5, 1.0]) {
+      const px = computeLetterPx(400, 2.336, lm);
+      expect(Number.isFinite(px)).toBe(true);
+      expect(px).toBeGreaterThan(0);
+    }
   });
 
-  it("grows as logMAR worsens (bigger = lower acuity)", () => {
-    expect(computeLetterPx(3000, 10, 0.2)).toBeGreaterThan(
-      computeLetterPx(3000, 10, 0.1),
-    );
+  it("respects the minimum floor so the glyph is always drawn", () => {
+    const px = computeLetterPx(1, 0.1, -0.3);
+    expect(px).toBe(24);
   });
 
-  it("logMAR 0 is the geometric baseline regardless of distance", () => {
-    const expected = 2 * 1000 * Math.tan(TWO_POINT_FIVE_ARCMIN_RAD) * 11.81;
-    expect(computeLetterPx(1000, 11.81, 0)).toBeCloseTo(expected, 2);
+  it("respects the maximum ceiling so the letter stays on-screen", () => {
+    const px = computeLetterPx(100000, 100, 1.0);
+    expect(px).toBe(140);
+  });
+
+  it("honours custom base/min/max options", () => {
+    const px = computeLetterPx(400, 2.336, 0, {
+      basePx: 200,
+      minPx: 50,
+      maxPx: 300,
+    });
+    expect(px).toBeGreaterThan(100);
+    expect(px).toBeLessThanOrEqual(300);
   });
 });
 
