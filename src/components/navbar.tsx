@@ -3,6 +3,7 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import { Menu, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -69,8 +70,16 @@ export function Navbar() {
         >
           <Link
             href="/"
-            className="text-lg font-semibold tracking-wide text-foreground transition-colors hover:text-primary shrink-0"
+            className="flex items-center gap-2 text-lg font-semibold tracking-wide text-foreground transition-colors hover:text-primary shrink-0"
           >
+            <Image
+              src="/icon.svg"
+              alt="SeeFit logo"
+              width={24}
+              height={24}
+              className="rounded-md"
+              priority
+            />
             SeeFit
           </Link>
 
