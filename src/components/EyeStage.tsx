@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 
-import TargetWrapper from "@/components/TargetWrapper";
 import type { Exercise } from "@/lib/exercises";
 import { buildEyeMotion, FocusIcon } from "@/lib/gym/eyeMotion";
 
@@ -25,12 +24,24 @@ type EyeStageProps = {
   reduceMotion: boolean;
   /** Speed multiplier — fast runs at 0.5×, slow at 1.6× the normal duration. */
   speed?: Speed;
-  /** When true, render the full-bleed fullscreen overlay with an exit control. */
+  /**
+   * When true, render a full-bleed stage that fills the nearest positioned
+   * ancestor (used inside the `fixed inset-0` wrapper in the fullscreen layout).
+   * When false (legacy/test use), render the historical inline aspect-video box.
+   */
   fullscreen: boolean;
-  /** Called when the fullscreen exit control is clicked. */
+  /**
+   * Called when the exit control is clicked (fullscreen mode only).
+   * Can be a no-op when the parent handles navigation itself.
+   */
   onExit: () => void;
   /** Optional display name for the aria-label; falls back to NAME_BY_SLUG or the slug. */
   name?: string;
+  /**
+   * Bumping this key re-mounts the animation (used to restart after a rep
+   * completes without re-mounting the whole stage).
+   */
+  repVersion?: number;
 };
 
 export function EyeStage({
@@ -40,6 +51,7 @@ export function EyeStage({
   fullscreen,
   onExit,
   name,
+  repVersion = 0,
 }: EyeStageProps) {
   const motionProps = buildEyeMotion(exercise, reduceMotion);
   const durMult = speed === "fast" ? 0.5 : speed === "slow" ? 1.6 : 1;
@@ -49,11 +61,11 @@ export function EyeStage({
 
   const ariaName = name ?? NAME_BY_SLUG[exercise.slug] ?? exercise.slug;
   const focusClass =
-    "flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/40";
+    "flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 ring-4 ring-primary/20";
 
   const focusIcon = (
     <span className={focusClass}>
-      <FocusIcon slug={exercise.slug} className="h-8 w-8" />
+      <span className="h-2.5 w-2.5 rounded-full bg-primary-foreground" />
     </span>
   );
 
@@ -61,7 +73,7 @@ export function EyeStage({
   // no keyframes exist, render a static (non-motion) centring div.
   const movingField = motionProps ? (
     <motion.div
-      key={speed}
+      key={`${speed}-${repVersion}`}
       className="absolute inset-0 flex items-center justify-center"
       animate={motionProps.animate}
       transition={transition}
@@ -73,36 +85,28 @@ export function EyeStage({
   );
 
   if (fullscreen) {
+    // Full-bleed: fills the nearest `fixed inset-0` positioned parent.
+    // The exit button is intentionally removed here — the layout layer (TopHeader)
+    // provides navigation. `onExit` is kept in the API for backward compatibility.
     return (
-      <div className="fixed inset-0 z-40 flex items-center justify-center overflow-hidden bg-background">
-        {/* Full-bleed field fills the viewport so EDGE_AMPLITUDE_PCT (44) makes the
-            focus icon travel near the real screen edges. */}
-        <div className="relative h-full w-full bg-secondary">{movingField}</div>
-        {/* Top-right exit control; safe-area padding keeps it clear of notches. */}
-        <div className="absolute inset-x-0 top-0 flex justify-end p-4 pt-[env(safe-area-inset-top)]">
-          <button
-            type="button"
-            aria-label="Keluar dari layar penuh"
-            onClick={onExit}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-background/90 text-2xl leading-none text-foreground shadow-lg ring-1 ring-border transition-colors hover:bg-secondary"
-          >
-            ⨯
-          </button>
+      <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+        <div className="relative h-full w-full bg-transparent">
+          {movingField}
         </div>
       </div>
     );
   }
 
-  // Inline mode: exact replica of the historical detail-box stage.
+  // Inline mode: historical aspect-video box (used in legacy/test contexts).
   return (
     <div
       className="relative mx-auto aspect-video w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-background"
       role="img"
       aria-label={`Ilustrasi gerakan mata untuk ${ariaName}`}
     >
-      <TargetWrapper>
+      <div className="absolute inset-0 flex items-center justify-center">
         <div className="relative aspect-square h-full bg-secondary">{movingField}</div>
-      </TargetWrapper>
+      </div>
     </div>
   );
 }

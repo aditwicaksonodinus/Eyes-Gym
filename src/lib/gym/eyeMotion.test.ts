@@ -97,7 +97,7 @@ describe("eyeMotion", () => {
     }
   });
 
-  it("relaksasi pulses scaleY with easeInOut over 1.4s", () => {
+  it("relaksasi pulses scaleY with easeInOut over 2.2s (slowed for comfort)", () => {
     const motion = buildEyeMotion(
       makeExercise("blinking", "relaksasi"),
       false,
@@ -106,17 +106,20 @@ describe("eyeMotion", () => {
       scaleY: [1, 0.05, 1, 1],
       scaleX: [1, 1, 1, 1],
     });
-    expect(motion.transition.duration).toBe(1.4);
+    expect(motion.transition.duration).toBe(2.2);
     expect(motion.transition.ease).toBe("easeInOut");
   });
 
-  it("fokus grows/shrinks scale with easeInOut over 3s", () => {
+  it("fokus grows/shrinks scale with easeInOut over 5s (slowed for focus shift)", () => {
     const motion = buildEyeMotion(
       makeExercise("near-far-focus", "fokus"),
       false,
     )!;
-    expect(motion.animate).toEqual({ scale: [0.6, 1.4, 0.6] });
-    expect(motion.transition.duration).toBe(3);
+    expect(motion.animate).toEqual({
+      scale: [2.0, 0.3, 2.0],
+      y: ["40%", "0%", "40%"],
+    });
+    expect(motion.transition.duration).toBe(5);
     expect(motion.transition.ease).toBe("easeInOut");
   });
 

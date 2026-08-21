@@ -6,5 +6,5 @@ export function generateStaticParams() {
 }
 
 export default function Page({ params }: { params: { slug: string } }) {
-  return <ExerciseDetailClient slug={params.slug} />;
+  return <ExerciseDetailClient key={params.slug} slug={params.slug} />;
 }

@@ -43,12 +43,12 @@ describe("createAcuityTest — perfect (all correct)", () => {
 describe("createAcuityTest — all incorrect", () => {
   it("reports band 'Perlu pemeriksaan' and Snellen worse than 20/60", () => {
     const t = createAcuityTest();
-    for (let i = 0; i < 11; i++) t.answer(false);
+    for (let i = 0; i < 8; i++) t.answer(false);
     const r = t.result();
     expect(r.band).toBe("Perlu pemeriksaan");
     const denom = Number(r.snellenFraction.split("/")[1]);
     expect(denom).toBeGreaterThan(60);
-    expect(r.snellenFraction).toBe("20/200");
+    expect(r.snellenFraction).toBe("20/126");
   });
 });
 
@@ -100,16 +100,16 @@ describe("createAcuityTest — state + stop rule", () => {
     expect(s.answers).toEqual([true]);
   });
 
-  it("stops when logMAR hits a bound and cannot move further", () => {
+  it("stops when answers length reaches exactly 8", () => {
     const t = createAcuityTest();
-    for (let i = 0; i < 11; i++) t.answer(false); // clamps at 1.0 then stops
+    for (let i = 0; i < 8; i++) t.answer(false);
     expect(t.getState().done).toBe(true);
-    expect(t.getState().logMAR).toBe(1.0);
+    expect(t.getState().logMAR).toBeCloseTo(0.8, 6);
   });
 
   it("ignores answers after done", () => {
     const t = createAcuityTest();
-    for (let i = 0; i < 11; i++) t.answer(false);
+    for (let i = 0; i < 8; i++) t.answer(false);
     const before = t.getState().answers.length;
     t.answer(true);
     expect(t.getState().answers.length).toBe(before);
@@ -130,10 +130,10 @@ describe("createAcuityTest — robustness / edge cases", () => {
 
   it("all-incorrect run terminates and reports a finite, non-NaN result", () => {
     const t = createAcuityTest();
-    for (let i = 0; i < 11; i++) t.answer(false);
+    for (let i = 0; i < 8; i++) t.answer(false);
     const r = t.result();
     expect(Number.isFinite(r.logMAR)).toBe(true);
-    expect(r.snellenFraction).toBe("20/200");
+    expect(r.snellenFraction).toBe("20/126");
     expect(r.band).toBe("Perlu pemeriksaan");
   });
 
@@ -162,8 +162,8 @@ describe("createAcuityTest — robustness / edge cases", () => {
   });
 
   it("boundary logMAR 1.0 (worst) → 20/200, Perlu pemeriksaan", () => {
-    const t = createAcuityTest();
-    for (let i = 0; i < 11; i++) t.answer(false); // pins at 1.0
+    const t = createAcuityTest({ startLogMAR: 1.0 });
+    for (let i = 0; i < 8; i++) t.answer(false); // pins at 1.0
     const r = t.result();
     expect(r.logMAR).toBe(1.0);
     expect(r.snellenFraction).toBe("20/200");

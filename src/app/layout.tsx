@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
-import Navbar from "@/components/navbar";
-import Footer from "@/components/footer";
-import ReminderGate from "@/components/reminder-gate";
 import OrientationGate from "@/components/orientation-gate";
 
 export const metadata: Metadata = {
@@ -12,6 +9,17 @@ export const metadata: Metadata = {
     "Kurangi kelelahan mata akibat menatap layar dengan latihan mata terpandu, tes mandiri, dan pengingat 20-20-20.",
 };
 
+/**
+ * Root layout — hanya menyediakan:
+ * - <html> dan <body> dengan font/warna dasar
+ * - ThemeProvider (dark mode untuk seluruh app)
+ * - OrientationGate (global overlays)
+ *
+ * Navbar dan Footer TIDAK ada di sini — masing-masing route group yang membutuhkan
+ * menambahkan sendiri:
+ *   - (main)/layout.tsx  → Navbar + Footer + <main> padding
+ *   - (fullscreen)/layout.tsx → tanpa Navbar/Footer, konten mengisi penuh viewport
+ */
 export default function RootLayout({
   children,
 }: {
@@ -21,15 +29,11 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning>
       <body className="flex min-h-screen flex-col font-sans text-foreground antialiased">
         <ThemeProvider>
-          <Navbar />
-          <main className="mx-auto w-full flex-1 overflow-x-hidden px-4 py-8">
-            {children}
-          </main>
-          <Footer />
-          <ReminderGate />
+          {children}
           <OrientationGate />
         </ThemeProvider>
       </body>
     </html>
   );
 }
+

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 // framer-motion's motion.div can touch matchMedia/reduced-motion internals in
 // jsdom; polyfill it as the page test does.
@@ -35,37 +35,42 @@ describe("EyeStage", () => {
     expect(img).toHaveClass(
       "relative mx-auto aspect-video w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-background",
     );
+    // Inline mode has no fixed overlay
     expect(
       container.querySelector(".fixed.inset-0"),
     ).toBeNull();
+    // No exit button in inline mode
     expect(
       screen.queryByRole("button", { name: "Keluar dari layar penuh" }),
     ).not.toBeInTheDocument();
   });
 
-  it("fullscreen mode renders a fixed inset-0 element and an exit button", () => {
-    render(
+  it("fullscreen mode renders an absolute inset-0 stage element (no exit button — navigation is in TopHeader)", () => {
+    const { container } = render(
       <EyeStage exercise={exercise} reduceMotion={false} fullscreen onExit={vi.fn()} />,
     );
 
+    // Fullscreen EyeStage renders an absolute-positioned stage, NOT a fixed overlay
+    // (the fixed overlay is the parent layout wrapper)
     expect(
-      document.querySelector(".fixed.inset-0"),
+      container.querySelector(".absolute.inset-0"),
     ).not.toBeNull();
+
+    // The exit button is no longer inside EyeStage — navigation is handled by
+    // the TopHeader overlay in exercise-detail-client.tsx
     expect(
-      screen.getByRole("button", { name: "Keluar dari layar penuh" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Keluar dari layar penuh" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("clicking the fullscreen exit button calls onExit", () => {
+  it("fullscreen mode onExit prop is accepted without error (backward-compat API)", () => {
     const onExit = vi.fn();
-    render(
-      <EyeStage exercise={exercise} reduceMotion={false} fullscreen onExit={onExit} />,
-    );
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Keluar dari layar penuh" }),
-    );
-    expect(onExit).toHaveBeenCalledTimes(1);
+    // Should render without throwing even though the exit button no longer exists inside
+    expect(() =>
+      render(<EyeStage exercise={exercise} reduceMotion={false} fullscreen onExit={onExit} />),
+    ).not.toThrow();
+    // onExit is not called automatically
+    expect(onExit).not.toHaveBeenCalled();
   });
 
   it("reduceMotion renders a static (non-motion) centred icon in inline mode", () => {
@@ -78,7 +83,7 @@ describe("EyeStage", () => {
     );
     expect(centering).not.toBeNull();
     expect(
-      centering!.querySelector(".flex.h-16.w-16.items-center.justify-center"),
+      centering!.querySelector(".flex.h-8.w-8.items-center.justify-center"),
     ).not.toBeNull();
     // The inner moving stage is a plain div: buildEyeMotion returns null for
     // reduce=true, so no framer-motion `style` (motion.div sets a
@@ -88,19 +93,24 @@ describe("EyeStage", () => {
     expect(stage!.hasAttribute("style")).toBe(false);
   });
 
-  it("reduceMotion renders a stationary icon in fullscreen mode", () => {
+  it("reduceMotion renders a stationary icon in fullscreen mode (no animated style on inner stage)", () => {
     const { container } = render(
       <EyeStage exercise={exercise} reduceMotion fullscreen onExit={vi.fn()} />,
     );
 
-    expect(container.querySelector(".fixed.inset-0")).not.toBeNull();
+    // Outer wrapper is absolute inset-0 (not fixed — the parent provides fixed)
+    const outerWrapper = container.querySelector<HTMLElement>(".absolute.inset-0");
+    expect(outerWrapper).not.toBeNull();
+
     const field = container.querySelector<HTMLElement>("div.relative.h-full.w-full");
     expect(field).not.toBeNull();
+
     const stage = field!.querySelector("div.absolute.inset-0") as HTMLElement | null;
     expect(stage).not.toBeNull();
     expect(
-      stage!.querySelector(".flex.h-16.w-16.items-center.justify-center"),
+      stage!.querySelector(".flex.h-8.w-8.items-center.justify-center"),
     ).not.toBeNull();
+    // No framer-motion style when reduceMotion = true
     expect(stage!.hasAttribute("style")).toBe(false);
   });
 });

@@ -76,10 +76,11 @@ export function createDetailMachine(
   const { clock, nextSlug, onDone } = options;
   const isRepBased = exercise.reps !== undefined;
 
-  // Duration target uses the inclusive max bound (spec §2 ranges).
-  const targetMs = getDurationBounds(exercise).max * 1000;
   // Rep target uses the inclusive max bound.
   const targetReps = getRepBounds(exercise).max;
+  // Duration target: for rep-based exercises, it is targetReps * single repetition duration.
+  const singleRepMs = getDurationBounds(exercise).max * 1000;
+  const targetMs = isRepBased ? targetReps * singleRepMs : singleRepMs;
 
   let status: DetailStatus = "idle";
   let remainingMs = targetMs;
@@ -94,13 +95,17 @@ export function createDetailMachine(
     onDone?.();
   }
 
-  /** Fold elapsed clock time into `remainingMs` (duration-based only). */
+  /** Fold elapsed clock time into `remainingMs`. */
   function advance(): void {
-    if (status !== "running" || isRepBased) return;
+    if (status !== "running") return;
     const t = clock();
     if (lastTick !== null) {
       const elapsed = t - lastTick;
       remainingMs = Math.max(0, remainingMs - elapsed);
+      if (isRepBased) {
+        const elapsedTotalMs = targetMs - remainingMs;
+        completedReps = Math.min(targetReps, Math.floor(elapsedTotalMs / singleRepMs));
+      }
       if (remainingMs <= 0) {
         remainingMs = 0;
         status = "done";
@@ -115,7 +120,9 @@ export function createDetailMachine(
     advance();
     const base: DetailState = {
       status,
-      remainingSec: isRepBased ? 0 : Math.ceil(remainingMs / 1000),
+      remainingSec: isRepBased
+        ? Math.ceil((remainingMs % singleRepMs || (remainingMs > 0 ? singleRepMs : 0)) / 1000)
+        : Math.ceil(remainingMs / 1000),
       done: status === "done",
     };
     if (isRepBased) {
@@ -149,7 +156,9 @@ export function createDetailMachine(
     completeRep(): void {
       if (status === "done" || !isRepBased) return;
       completedReps = Math.min(targetReps, completedReps + 1);
-      if (completedReps >= targetReps) {
+      remainingMs = Math.max(0, targetMs - completedReps * singleRepMs);
+      if (completedReps >= targetReps || remainingMs <= 0) {
+        remainingMs = 0;
         status = "done";
         lastTick = null;
         fireDone();

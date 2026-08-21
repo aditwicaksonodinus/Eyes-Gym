@@ -20,6 +20,6 @@ describe("exercises/session page", () => {
     await user.click(startButton);
 
     // After starting, the first exercise (blinking) name appears.
-    expect(screen.getByText("Kedip Cepat")).toBeInTheDocument();
+    expect(screen.getAllByText("Kedip Cepat")[0]).toBeInTheDocument();
   });
 });

@@ -51,12 +51,23 @@ export function circleKeyframes(radiusPct: number, points = 16): {
  * Movement is expressed as `x`/`y` percentage offsets of a full-stage flex
  * container, so the focus icon (centered inside it) is translated by that
  * fraction of the stage. Using transforms instead of `left`/`top` keeps the
- * animation GPU-friendly and light. relaksasi/fokus pulse via scale instead of
- * moving. Every keyframe is a plain linear array (no logarithmic/quadratic
- * math) so it stays cheap and responsive.
+ * animation GPU-friendly and light.
  *
- * Offsets are relative to the stage centre (0% = centre). A value of "44%"
- * moves the icon to 94% of the stage width/height.
+ * ## Duration tuning (eye-comfort first)
+ * All `gerakan` animations now use `easeInOut` instead of `linear` so the
+ * icon accelerates gently, pauses at each extreme, then decelerates — this
+ * mirrors how real eye-movement exercises feel and is far less fatiguing than
+ * a constant-velocity sweep. Durations are per-exercise:
+ *
+ * | exercise               | duration |
+ * |------------------------|----------|
+ * | blinking (relaksasi)   |  2.2 s   |
+ * | near-far-focus (fokus) |  5.0 s   |
+ * | figure-8               |  7.0 s   |
+ * | eye-rolling            |  8.0 s   |
+ * | atas-bawah-kiri-kanan  |  5.0 s   |
+ * | zig-zag                |  6.0 s   |
+ * | diagonal-gaze          |  6.0 s   |
  */
 export function buildEyeMotion(ex: Exercise, reduce: boolean): EyeMotion | null {
   if (reduce) return null;
@@ -65,69 +76,83 @@ export function buildEyeMotion(ex: Exercise, reduce: boolean): EyeMotion | null 
   if (category === "relaksasi") {
     // Kedip Cepat: one clear blink (close → open) followed by a short rest,
     // then repeats. scaleY about the centred icon reads as an eyelid.
+    // Slightly slower than before (1.4 → 2.2 s) so it feels less frantic.
     return {
       animate: { scaleY: [1, 0.05, 1, 1], scaleX: [1, 1, 1, 1] },
-      transition: { duration: 1.4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
+      transition: { duration: 2.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
     };
   }
+
   if (category === "fokus") {
-    // Near–far focus: the object grows (near) and shrinks (far).
+    // Near–far focus: the object starts very large and low (representing close to user's face),
+    // then moves to the center and shrinks to small (representing far distance).
     return {
-      animate: { scale: [0.6, 1.4, 0.6] },
-      transition: { duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
+      animate: {
+        scale: [2.0, 0.3, 2.0],
+        y: ["40%", "0%", "40%"],
+      },
+      transition: { duration: 5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
     };
   }
 
   // gerakan — the focus icon traces the pattern via x/y offsets (centre = 0%).
-  // Linear easing keeps motion cheap and continuous (case 3); no easing means
-  // the speed control is immediately visible (case 5). Every gerakan keyframe
-  // set below reaches EDGE_AMPLITUDE_PCT (±44%) on both axes.
-  const move = { duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "linear" as const };
+  // All gerakan now use easeInOut (was linear) for smoother, less-fatiguing motion.
+  // Each exercise has a tuned duration for natural pacing.
+  const ease = "easeInOut" as const;
+
   switch (slug) {
     case "figure-8":
+      // Duration 7 s — slow enough to follow, fast enough to feel dynamic.
+      // Speed control (slow/normal/fast) multiplies this base.
       return {
         animate: {
           x: ["0%", "44%", "44%", "0%", "-44%", "-44%", "0%"],
           y: ["0%", "-44%", "44%", "0%", "44%", "-44%", "0%"],
         },
-        transition: move,
+        transition: { duration: 7, repeat: Number.POSITIVE_INFINITY, ease },
       };
+
     case "eye-rolling":
-      // True smooth circle traced by 16+ ring points (case 6).
+      // True smooth circle: 8 s for a full rotation — comfortable circular motion.
       return {
         animate: circleKeyframes(EDGE_AMPLITUDE_PCT, 24),
-        transition: move,
+        transition: { duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "linear" },
       };
+
     case "atas-bawah-kiri-kanan":
+      // 5 s — shorter because this pattern has fewer keyframes (up/down/left/right).
       return {
         animate: {
           x: ["0%", "0%", "0%", "-44%", "44%", "0%"],
           y: ["-44%", "44%", "0%", "0%", "0%", "0%"],
         },
-        transition: move,
+        transition: { duration: 5, repeat: Number.POSITIVE_INFINITY, ease },
       };
+
     case "zig-zag":
-      // Sweep left–right while descending. Movement only — no fade (case 7).
+      // 6 s — descending sweep; easeInOut makes each zig/zag feel deliberate.
       return {
         animate: {
           x: ["-44%", "44%", "-44%", "44%", "-44%"],
           y: ["-31%", "-6%", "19%", "44%", "-31%"],
         },
-        transition: move,
+        transition: { duration: 6, repeat: Number.POSITIVE_INFINITY, ease },
       };
+
     case "diagonal-gaze":
-      // Diagonal moves covering all four directions (TL↔BR and TR↔BL both ways).
+      // 6 s — covers TL↔BR and TR↔BL diagonals; easeInOut softens the corners.
       return {
         animate: {
           x: ["-44%", "44%", "44%", "-44%", "-44%", "44%", "44%", "-44%"],
           y: ["-44%", "44%", "-44%", "44%", "44%", "-44%", "-44%", "44%"],
         },
-        transition: move,
+        transition: { duration: 6, repeat: Number.POSITIVE_INFINITY, ease },
       };
+
     default:
       return {
         animate: { x: ["-44%", "44%", "-44%"], y: ["0%", "0%", "0%"] },
-        transition: move,
+        transition: { duration: 6, repeat: Number.POSITIVE_INFINITY, ease },
       };
   }
 }

@@ -14,35 +14,24 @@ describe("TestPage (/test wizard)", () => {
     ).toBeInTheDocument();
   });
 
-  it("advances from disclaimer (step 0) to calibration (step 1) on 'Mulai Tes'", async () => {
+  it("advances from disclaimer (step 0) through instructions (step 1) to acuity test (step 2)", async () => {
     const user = userEvent.setup();
     render(<TestPage />);
 
-    // Step 0: disclaimer only — calibration control not yet present.
+    // Step 0: disclaimer only — test buttons not yet present.
     expect(
-      screen.queryByLabelText(/lebar kartu kredit di layar/i),
+      screen.queryByRole("button", { name: "Terbaca" }),
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Mulai Tes" }));
 
-    // Step 1: calibration inputs now visible.
-    expect(
-      screen.getByLabelText(/lebar kartu kredit di layar/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Lanjut" }),
-    ).toBeInTheDocument();
-  });
+    // Step 1: instructions page is shown. Start button is now present.
+    const startNowButton = screen.getByRole("button", { name: "Mulai Sekarang" });
+    expect(startNowButton).toBeInTheDocument();
 
-  it("enters the acuity step (step 2) and renders the test letter + answer buttons", async () => {
-    const user = userEvent.setup();
-    render(<TestPage />);
+    await user.click(startNowButton);
 
-    await user.click(screen.getByRole("button", { name: "Mulai Tes" }));
-    await user.click(screen.getByRole("button", { name: "Lanjut" }));
-
-    // Step 2 must initialise the engine and show the optotype (regression: a
-    // missing state setter used to throw here, leaving the step blank/stuck).
+    // Step 2: acuity test buttons and letter now visible.
     expect(
       await screen.findByRole("button", { name: "Terbaca" }),
     ).toBeInTheDocument();

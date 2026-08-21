@@ -41,6 +41,8 @@ export interface AcuityOptions {
   step?: number;
   /** Stop after this many reversals. Default 6. */
   maxReversals?: number;
+  /** Starting logMAR. Default 0.0. */
+  startLogMAR?: number;
 }
 
 export interface AcuityState {
@@ -115,7 +117,7 @@ export function createAcuityTest(opts: AcuityOptions = {}) {
   const step = opts.step ?? DEFAULTS.step;
   const maxReversals = opts.maxReversals ?? DEFAULTS.maxReversals;
 
-  let logMAR = 0.0;
+  let logMAR = opts.startLogMAR ?? 0.0;
   let done = false;
   let reversals = 0;
   const answers: boolean[] = [];
@@ -153,9 +155,8 @@ export function createAcuityTest(opts: AcuityOptions = {}) {
     logMAR = next;
     answers.push(correct);
 
-    // Stop rule: enough reversals, OR pinned at a bound it cannot move past.
-    const pinnedAtBound = clamp(logMAR + newDirection * step) === logMAR;
-    if (reversals >= maxReversals || pinnedAtBound) {
+    // Stop rule: exactly 8 trials.
+    if (answers.length >= 8) {
       done = true;
     }
 
