@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
-import { motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,7 +13,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-import TargetWrapper from "@/components/TargetWrapper";
+import EyeStage from "@/components/EyeStage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +33,6 @@ import {
   type ExerciseCategory,
 } from "@/lib/exercises";
 import { createDetailMachine, type DetailMachine } from "@/lib/gym/detailMachine";
-import { buildEyeMotion, FocusIcon } from "@/lib/gym/eyeMotion";
 import { useTimer } from "@/lib/useTimer";
 import { useAppStore } from "@/store/appStore";
 
@@ -88,47 +87,6 @@ function motionHint(ex: Exercise): string {
   }
 }
 
-function EyeAnimation({
-  exercise,
-  reduceMotion,
-  speed = "normal",
-}: {
-  exercise: Exercise;
-  reduceMotion: boolean;
-  speed?: "normal" | "fast" | "slow";
-}) {
-  const motionProps = buildEyeMotion(exercise, reduceMotion);
-  const durMult = speed === "fast" ? 0.5 : speed === "slow" ? 1.6 : 1;
-  const transition = motionProps ? { ...motionProps.transition, duration: motionProps.transition.duration * durMult } : undefined;
-  const focusClass = "flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/40";
-  return (
-      <div className="relative mx-auto aspect-video w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-background" role="img" aria-label={`Ilustrasi gerakan mata untuk ${NAME_BY_SLUG[exercise.slug] ?? exercise.slug}`}>
-        <TargetWrapper>
-        <div className="relative aspect-square h-full bg-secondary">
-          {motionProps ? (
-            <motion.div
-              key={speed}
-              className="absolute inset-0 flex items-center justify-center"
-              animate={motionProps.animate}
-              transition={transition}
-            >
-              <span className={focusClass}>
-                <FocusIcon slug={exercise.slug} className="h-8 w-8" />
-              </span>
-            </motion.div>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className={focusClass}>
-                <FocusIcon slug={exercise.slug} className="h-8 w-8" />
-              </span>
-            </div>
-          )}
-        </div>
-        </TargetWrapper>
-      </div>
-  );
-}
-
 export function ExerciseDetailClient({ slug }: { slug: string }) {
   const router = useRouter();
   const reduceMotion = useReducedMotion() ?? false;
@@ -150,6 +108,7 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
   const [done, setDone] = React.useState(false);
   const [repVersion, setRepVersion] = React.useState(0);
   const [speed, setSpeed] = React.useState<"normal" | "fast" | "slow">("normal");
+  const [activeFullscreen, setActiveFullscreen] = React.useState(false);
 
   if (machineRef.current === null) {
     machineRef.current = createDetailMachine(exercise, {
@@ -174,6 +133,16 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
   const handleCompleteRep = () => {
     machineRef.current?.completeRep();
     setRepVersion((v) => v + 1);
+    setActiveFullscreen(true);
+  };
+
+  const handleStartTimer = () => {
+    setActiveFullscreen(true);
+    timer.start();
+  };
+
+  const handleExitFullscreen = () => {
+    setActiveFullscreen(false);
   };
 
   const handleReset = () => {
@@ -181,6 +150,7 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
     machineRef.current?.reset();
     setDone(false);
     setRepVersion(0);
+    setActiveFullscreen(false);
   };
 
   const selanjutnyaHref = nextSlug
@@ -191,6 +161,82 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
 
   return (
     <div className="space-y-8">
+      {activeFullscreen && !done && (
+        <>
+          <EyeStage
+            exercise={exercise}
+            reduceMotion={reduceMotion}
+            speed={speed}
+            fullscreen
+            onExit={handleExitFullscreen}
+            name={name}
+          />
+          {/* Compact overlay control bar pinned top-center, above the z-40 stage.
+              Kept slim/centered so the moving icon's EDGE_AMPLITUDE_PCT (44%)
+              sweep near the viewport edges is never covered. */}
+          <div
+            data-testid="fullscreen-control-bar"
+            className="fixed inset-x-0 top-0 z-[41] flex justify-center pt-[env(safe-area-inset-top)]"
+          >
+            <div className="mx-4 mt-3 flex items-center gap-2 rounded-full border border-border bg-background/90 px-4 py-2 shadow-lg backdrop-blur">
+              {isRepBased ? (
+                <>
+                  <span
+                    className="text-lg font-bold tabular-nums text-foreground"
+                    data-testid="fullscreen-reps"
+                  >
+                    {completedReps} / {repTarget}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="gap-2"
+                    onClick={handleCompleteRep}
+                  >
+                    <CheckCircle2 className="h-4 w-4" aria-hidden />
+                    Selesai 1 repetisi
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span
+                    className="text-lg font-bold tabular-nums text-foreground"
+                    data-testid="fullscreen-countdown"
+                  >
+                    {formatTime(timer.remainingSec)}
+                  </span>
+                  {timer.running ? (
+                    <Button size="sm" variant="ghost" className="gap-2" onClick={timer.pause}>
+                      <Pause className="h-4 w-4" aria-hidden />
+                      Jeda
+                    </Button>
+                  ) : timer.remainingSec < durationMax ? (
+                    <Button size="sm" variant="ghost" className="gap-2" onClick={timer.resume}>
+                      <Play className="h-4 w-4" aria-hidden />
+                      Lanjutkan
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="ghost" className="gap-2" onClick={handleStartTimer}>
+                      <Play className="h-4 w-4" aria-hidden />
+                      Mulai
+                    </Button>
+                  )}
+                </>
+              )}
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-2"
+                onClick={() => machineRef.current?.complete()}
+              >
+                <CheckCircle2 className="h-4 w-4" aria-hidden />
+                Selesai
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+
       <div>
         <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2 text-muted-foreground">
           <Link href="/exercises">
@@ -213,11 +259,16 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
       {/* Animation + movement hint */}
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-8">
-          <EyeAnimation
-            exercise={exercise}
-            reduceMotion={reduceMotion}
-            speed={speed}
-          />
+          {(!activeFullscreen || done) && (
+            <EyeStage
+              exercise={exercise}
+              reduceMotion={reduceMotion}
+              speed={speed}
+              fullscreen={false}
+              onExit={() => {}}
+              name={name}
+            />
+          )}
           <p className="max-w-md text-center text-sm text-muted-foreground">
             {motionHint(exercise)}
           </p>
@@ -349,7 +400,7 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
                       Lanjutkan
                     </Button>
                   ) : (
-                    <Button onClick={timer.start} className="gap-2">
+                    <Button onClick={handleStartTimer} className="gap-2">
                       <Play className="h-4 w-4" aria-hidden />
                       Mulai
                     </Button>
