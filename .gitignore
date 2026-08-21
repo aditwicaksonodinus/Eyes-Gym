@@ -35,3 +35,6 @@ next-env.d.ts
 /.codegraph
 /.omo
 /artifacts
+
+# generated service worker (built by npm run build)
+/public/sw.js

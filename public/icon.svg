@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Senam Mata">
+  <rect width="512" height="512" rx="96" fill="#eaf6f3"/>
+  <g fill="none" stroke="#3a9b8f" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M96 256 C160 168 352 168 416 256 C352 344 160 344 96 256 Z"/>
+    <circle cx="256" cy="256" r="64" fill="#3a9b8f" stroke="none"/>
+    <circle cx="256" cy="256" r="26" fill="#eaf6f3" stroke="none"/>
+  </g>
+</svg>

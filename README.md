@@ -12,7 +12,7 @@ Aplikasi web untuk meredakan kelelahan mata akibat layar (digital eye strain). S
   - `/exercises/session` — mode sesi penuh (playlist latihan berurutan, seperti guided workout).
 - **10 latihan** berdasarkan spesifikasi: 20-20-20, Palming, Kedip Cepat (Blinking), Near-Far Focus, Figure-8, Eye Rolling, Gerakan Atas-Bawah & Kiri-Kanan, Pencil Push-up, Zig-Zag, dan Diagonal Gaze.
 - **Tes mata self-check**: ketajaman visual sederhana (Snellen) + kuesioner kelelahan mata. Hasil berupa skrining dan rekomendasi ke latihan, bukan diagnosis medis.
-- **PWA yang dapat dipasang** (installable) via `next-pwa`, lengkap dengan service worker.
+- **PWA yang dapat dipasang** (installable) via `@serwist/next`, lengkap dengan service worker.
 - **Pengingat 20-20-20**: notifikasi Web Notifications + getaran (vibration) di perangkat mobile.
 
 ## Cara Menjalankan
