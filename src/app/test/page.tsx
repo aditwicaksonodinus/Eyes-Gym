@@ -67,7 +67,10 @@ export default function TestPage() {
   // be mis-attributed to the wrong eye after one eye finishes).
   const sideRef = React.useRef<EyeSide>("left");
   const [currentSide, setCurrentSide] = React.useState<EyeSide>("left");
-  const [letterIndex, setLetterIndex] = React.useState(0);
+  // Mirrors engineRef so the acuity card re-renders once the engine exists.
+  // Refs alone do not trigger a re-render, which previously left step 2 blank.
+  const [engineReady, setEngineReady] = React.useState(false);
+  const [letterChar, setLetterChar] = React.useState<string>(SLOAN[0]);
   const [leftLogMAR, setLeftLogMAR] = React.useState<number | null>(null);
   const [rightLogMAR, setRightLogMAR] = React.useState<number | null>(null);
   const [leftSnellen, setLeftSnellen] = React.useState<string>("");
@@ -77,7 +80,8 @@ export default function TestPage() {
     engineRef.current = createAcuityTest();
     sideRef.current = side;
     setCurrentSide(side);
-    setLetterIndex(0);
+    setLetterChar(SLOAN[Math.floor(Math.random() * SLOAN.length)]);
+    setEngineReady(true);
   }, []);
 
   // Initialize the engine when we first enter the acuity step.
@@ -109,7 +113,7 @@ export default function TestPage() {
           setStep(3);
         }
       } else {
-        setLetterIndex((i) => i + 1);
+        setLetterChar(SLOAN[Math.floor(Math.random() * SLOAN.length)]);
       }
     },
     [currentSide, effDistanceMm, startEye],
@@ -153,6 +157,7 @@ export default function TestPage() {
 
   const handleReset = React.useCallback(() => {
     engineRef.current = null;
+    setEngineReady(false);
     recordedRef.current = false;
     setLeftLogMAR(null);
     setRightLogMAR(null);
@@ -175,7 +180,7 @@ export default function TestPage() {
       };
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-4xl">
       <motion.div key={step} {...motionProps}>
         {step === 0 && (
           <Card>
@@ -277,7 +282,7 @@ export default function TestPage() {
           </Card>
         )}
 
-        {step === 2 && engineRef.current && (
+        {step === 2 && engineReady && (
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">
@@ -288,47 +293,72 @@ export default function TestPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex min-h-[160px] items-center justify-center rounded-md border border-border bg-card p-4">
-                <svg
-                  role="img"
-                  aria-label={`Huruf uji ${SLOAN[letterIndex % SLOAN.length]}`}
-                  width={computeLetterPx(
-                    effDistanceMm,
-                    effPxPerMm,
-                    engineRef.current.getState().logMAR,
-                  )}
-                  height={computeLetterPx(
-                    effDistanceMm,
-                    effPxPerMm,
-                    engineRef.current.getState().logMAR,
-                  )}
-                  viewBox={`0 0 ${computeLetterPx(
-                    effDistanceMm,
-                    effPxPerMm,
-                    engineRef.current.getState().logMAR,
-                  )} ${computeLetterPx(
-                    effDistanceMm,
-                    effPxPerMm,
-                    engineRef.current.getState().logMAR,
-                  )}`}
-                  className="text-foreground"
-                >
-                  <text
-                    x="50%"
-                    y="50%"
-                    dominantBaseline="central"
-                    textAnchor="middle"
-                    fontSize={computeLetterPx(
-                      effDistanceMm,
-                      effPxPerMm,
-                      engineRef.current.getState().logMAR,
-                    )}
-                    fill="currentColor"
-                  >
-                    {SLOAN[letterIndex % SLOAN.length]}
-                  </text>
-                </svg>
+              <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-border bg-background">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {/* Circular eye-field background (case 4) — the optotype
+                      moves inside this field, not a square. */}
+                  <div className="relative aspect-square h-full rounded-full bg-secondary">
+                    {/* Decorative size-variation chart (kecil → sedang → besar),
+                        aria-hidden: purely illustrates that optotypes differ in
+                        size; the bright centred letter is the real stimulus. */}
+                    <div
+                      aria-hidden
+                      className="absolute inset-x-0 bottom-4 flex items-end justify-center gap-4 opacity-25"
+                    >
+                      {[22, 40, 60].map((px, i) => (
+                        <span
+                          key={i}
+                          className="font-bold leading-none text-foreground"
+                          style={{ fontSize: px }}
+                        >
+                          {SLOAN[i % SLOAN.length]}
+                        </span>
+                      ))}
+                    </div>
+                    {/* Active test letter — size computed per pixel from the
+                        calibration + current logMAR (case: per-pixel severity). */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {(() => {
+                        const logMAR =
+                          engineRef.current?.getState().logMAR ?? 0;
+                        const raw = computeLetterPx(
+                          effDistanceMm,
+                          effPxPerMm,
+                          logMAR,
+                        );
+                        const size =
+                          Number.isFinite(raw) && raw > 0 ? raw : 80;
+                        return (
+                          <svg
+                            role="img"
+                            aria-label={`Huruf uji ${letterChar}`}
+                            width={size}
+                            height={size}
+                            viewBox="0 0 100 100"
+                            className="text-foreground"
+                          >
+                            <text
+                              x="50%"
+                              y="50%"
+                              dominantBaseline="central"
+                              textAnchor="middle"
+                              fontSize="80"
+                              fill="currentColor"
+                            >
+                              {letterChar}
+                            </text>
+                          </svg>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
               </div>
+              <p className="text-center text-xs text-muted-foreground">
+                Mata diuji: {EYE_LABEL[currentSide]} · ukuran huruf dihitung per
+                piksel dari kalibrasi &amp; logMAR (semakin kecil = semakin
+                tajam).
+              </p>
               <p className="text-center text-xs text-muted-foreground">
                 Mata diuji: {EYE_LABEL[currentSide]} · Petunjuk: sebutkan huruf
                 sejelas mungkin.

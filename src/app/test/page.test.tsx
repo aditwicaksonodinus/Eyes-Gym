@@ -33,4 +33,24 @@ describe("TestPage (/test wizard)", () => {
       screen.getByRole("button", { name: "Lanjut" }),
     ).toBeInTheDocument();
   });
+
+  it("enters the acuity step (step 2) and renders the test letter + answer buttons", async () => {
+    const user = userEvent.setup();
+    render(<TestPage />);
+
+    await user.click(screen.getByRole("button", { name: "Mulai Tes" }));
+    await user.click(screen.getByRole("button", { name: "Lanjut" }));
+
+    // Step 2 must initialise the engine and show the optotype (regression: a
+    // missing state setter used to throw here, leaving the step blank/stuck).
+    expect(
+      await screen.findByRole("button", { name: "Terbaca" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Tidak Terbaca" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /Huruf uji/i }),
+    ).toBeInTheDocument();
+  });
 });

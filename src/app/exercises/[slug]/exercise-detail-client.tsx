@@ -95,78 +95,105 @@ function motionHint(ex: Exercise): string {
 
 type EyeMotion = {
   animate: Record<string, (number | string)[]>;
-  transition: { duration: number; repeat: number; ease: "easeInOut" };
+  transition: { duration: number; repeat: number; ease: "easeInOut" | "linear" };
 };
+
+function circleKeyframes(radiusPct: number, points = 16): {
+  x: string[];
+  y: string[];
+} {
+  const x: string[] = [];
+  const y: string[] = [];
+  for (let i = 0; i <= points; i++) {
+    const a = (i / points) * Math.PI * 2;
+    x.push(`${(Math.cos(a) * radiusPct).toFixed(1)}%`);
+    y.push(`${(-Math.sin(a) * radiusPct).toFixed(1)}%`);
+  }
+  return { x, y };
+}
 
 /**
  * Builds the Framer Motion keyframes that illustrate each exercise's pattern.
- * gerakan exercises sweep a focus square via left/top percentages (0–100% of the
- * eye box); relaksasi/fokus pulse via scale. zig-zag also fades (appear/disappear).
+ *
+ * Movement is expressed as `x`/`y` percentage offsets of a full-stage flex
+ * container, so the focus icon (centered inside it) is translated by that
+ * fraction of the stage. Using transforms instead of `left`/`top` keeps the
+ * animation GPU-friendly and light. relaksasi/fokus pulse via scale instead of
+ * moving. Every keyframe is a plain linear array (no logarithmic/quadratic
+ * math) so it stays cheap and responsive.
+ *
+ * Offsets are relative to the stage centre (0% = centre). A value of "30%"
+ * moves the icon to 80% of the stage width/height.
  */
 function buildEyeMotion(ex: Exercise, reduce: boolean): EyeMotion | null {
   if (reduce) return null;
-  const base = { duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" as const };
   const { category, slug } = ex;
 
   if (category === "relaksasi") {
-    // gentle breathing pulse — eyes closed, calm
+    // Kedip Cepat: one clear blink (close → open) followed by a short rest,
+    // then repeats. scaleY about the centred icon reads as an eyelid.
     return {
-      animate: { scale: [1, 1.25, 1], opacity: [0.7, 1, 0.7] },
-      transition: { ...base, duration: 3 },
+      animate: { scaleY: [1, 0.05, 1, 1], scaleX: [1, 1, 1, 1] },
+      transition: { duration: 1.4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
     };
   }
   if (category === "fokus") {
-    // square grows (near) and shrinks (far) — near<->far focus shift
-    return { animate: { scale: [0.6, 1.4, 0.6] }, transition: { ...base, duration: 3 } };
+    // Near–far focus: the object grows (near) and shrinks (far).
+    return {
+      animate: { scale: [0.6, 1.4, 0.6] },
+      transition: { duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
+    };
   }
-  // gerakan — focus square traces the pattern (cx/cy in 0–200 viewBox → /2 = %)
+
+  // gerakan — the focus icon traces the pattern via x/y offsets (centre = 0%).
+  // Linear easing keeps motion cheap and continuous (case 3); no easing means
+  // the speed control is immediately visible (case 5).
+  const move = { duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "linear" as const };
   switch (slug) {
     case "figure-8":
       return {
         animate: {
-          left: ["50%", "75%", "75%", "50%", "25%", "25%", "50%"],
-          top: ["50%", "35%", "65%", "50%", "65%", "35%", "50%"],
+          x: ["0%", "30%", "30%", "0%", "-30%", "-30%", "0%"],
+          y: ["0%", "-18%", "18%", "0%", "18%", "-18%", "0%"],
         },
-        transition: base,
+        transition: move,
       };
     case "eye-rolling":
+      // True smooth circle traced by 16+ ring points (case 6).
       return {
-        animate: {
-          left: ["50%", "80%", "50%", "20%", "50%"],
-          top: ["20%", "50%", "80%", "50%", "20%"],
-        },
-        transition: base,
+        animate: circleKeyframes(30, 24),
+        transition: move,
       };
     case "atas-bawah-kiri-kanan":
       return {
         animate: {
-          left: ["50%", "50%", "50%", "20%", "80%", "50%"],
-          top: ["22%", "78%", "50%", "50%", "50%", "50%"],
+          x: ["0%", "0%", "0%", "-30%", "30%", "0%"],
+          y: ["-28%", "28%", "0%", "0%", "0%", "0%"],
         },
-        transition: base,
+        transition: move,
       };
     case "zig-zag":
-      // sweep left–right while appearing/disappearing
+      // Sweep left–right while descending. Movement only — no fade (case 7).
       return {
         animate: {
-          left: ["20%", "80%", "20%", "80%", "20%"],
-          top: ["25%", "45%", "65%", "85%", "25%"],
-          opacity: [1, 0.15, 1, 0.15, 1],
+          x: ["-30%", "30%", "-30%", "30%", "-30%"],
+          y: ["-25%", "-5%", "15%", "35%", "-25%"],
         },
-        transition: base,
+        transition: move,
       };
     case "diagonal-gaze":
+      // Only diagonal moves through the centre: TL↔BR and TR↔BL (case 8).
       return {
         animate: {
-          left: ["20%", "80%", "20%", "80%", "20%"],
-          top: ["20%", "80%", "20%", "80%", "20%"],
+          x: ["-30%", "30%", "0%", "30%", "-30%", "0%", "-30%"],
+          y: ["-30%", "30%", "0%", "-30%", "30%", "0%", "-30%"],
         },
-        transition: base,
+        transition: move,
       };
     default:
       return {
-        animate: { left: ["20%", "80%", "20%"], top: ["50%", "50%", "50%"] },
-        transition: base,
+        animate: { x: ["-30%", "30%", "-30%"], y: ["0%", "0%", "0%"] },
+        transition: move,
       };
   }
 }
@@ -207,37 +234,38 @@ function EyeAnimation({
     ? { ...motionProps.transition, duration: motionProps.transition.duration * durMult }
     : undefined;
   const focusClass =
-    "absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/40";
+    "flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/40";
   return (
+    // The focus icon is nested inside the circular field so its x/y offsets
+    // stay within the circle instead of the full rectangle.
     <div
-      className="relative h-44 w-44 sm:h-52 sm:w-52"
+      className="relative mx-auto aspect-video w-full max-w-4xl overflow-hidden rounded-2xl border border-border bg-background"
       role="img"
       aria-label={`Ilustrasi gerakan mata untuk ${NAME_BY_SLUG[exercise.slug] ?? exercise.slug}`}
     >
-      <svg viewBox="0 0 200 200" className="absolute inset-0 h-full w-full">
-        <ellipse cx="100" cy="100" rx="84" ry="50" className="fill-secondary" />
-        <ellipse
-          cx="100"
-          cy="100"
-          rx="84"
-          ry="50"
-          className="fill-none stroke-border"
-          strokeWidth="2"
-        />
-      </svg>
-      {motionProps ? (
-        <motion.div
-          className={focusClass}
-          animate={motionProps.animate}
-          transition={transition}
-        >
-          <FocusIcon slug={exercise.slug} className="h-5 w-5" />
-        </motion.div>
-      ) : (
-        <div className={focusClass}>
-          <FocusIcon slug={exercise.slug} className="h-5 w-5" />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="relative aspect-square h-full rounded-full bg-secondary">
+          {motionProps ? (
+            <motion.div
+              // key forces a remount when speed changes so the new duration applies.
+              key={speed}
+              className="absolute inset-0 flex items-center justify-center"
+              animate={motionProps.animate}
+              transition={transition}
+            >
+              <span className={focusClass}>
+                <FocusIcon slug={exercise.slug} className="h-8 w-8" />
+              </span>
+            </motion.div>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className={focusClass}>
+                <FocusIcon slug={exercise.slug} className="h-8 w-8" />
+              </span>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
