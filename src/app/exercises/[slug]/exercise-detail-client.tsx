@@ -5,12 +5,19 @@ import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import {
+  Activity,
   ArrowLeft,
   ArrowRight,
+  ArrowUpDown,
   CheckCircle2,
+  Eye,
+  Infinity,
+  MoveDiagonal,
   Pause,
   Play,
+  RefreshCw,
   RotateCcw,
+  Target,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -37,14 +44,11 @@ import { useAppStore } from "@/store/appStore";
 
 /** Indonesian display names (registry only stores i18n keys — no dictionary yet). */
 const NAME_BY_SLUG: Record<string, string> = {
-  "20-20-20": "Aturan 20-20-20",
-  palming: "Palming",
   blinking: "Kedip Cepat",
   "near-far-focus": "Fokus Dekat–Jauh",
   "figure-8": "Angka 8",
   "eye-rolling": "Menggulung Mata",
   "atas-bawah-kiri-kanan": "Atas–Bawah & Kiri–Kanan",
-  "pencil-push-up": "Pencil Push-up",
   "zig-zag": "Zig-Zag",
   "diagonal-gaze": "Tatapan Diagonal",
 };
@@ -70,10 +74,6 @@ function formatTime(sec: number): string {
 /** Short Indonesian caption describing the animated movement pattern. */
 function motionHint(ex: Exercise): string {
   switch (ex.slug) {
-    case "20-20-20":
-      return "Pandangan melayang jauh, rileks dan tenang.";
-    case "palming":
-      return "Mata tertutup, napas masuk dan keluar dengan lembut.";
     case "blinking":
       return "Kedip cepat lalu istirahat sejenak.";
     case "near-far-focus":
@@ -84,8 +84,6 @@ function motionHint(ex: Exercise): string {
       return "Mata menggulung membentuk lingkaran penuh.";
     case "atas-bawah-kiri-kanan":
       return "Mata bergerak ke atas–bawah lalu kiri–kanan.";
-    case "pencil-push-up":
-      return "Fokus mendekat lalu menjauh saat tangan ditarik.";
     case "zig-zag":
       return "Mata mengikuti pola zig-zag.";
     case "diagonal-gaze":
@@ -96,102 +94,151 @@ function motionHint(ex: Exercise): string {
 }
 
 type EyeMotion = {
-  animate: Record<string, number[]>;
+  animate: Record<string, (number | string)[]>;
   transition: { duration: number; repeat: number; ease: "easeInOut" };
 };
 
-/** Builds the Framer Motion keyframes that illustrate each exercise's pattern. */
+/**
+ * Builds the Framer Motion keyframes that illustrate each exercise's pattern.
+ * gerakan exercises sweep a focus square via left/top percentages (0–100% of the
+ * eye box); relaksasi/fokus pulse via scale. zig-zag also fades (appear/disappear).
+ */
 function buildEyeMotion(ex: Exercise, reduce: boolean): EyeMotion | null {
   if (reduce) return null;
-  const base = { duration: 4, repeat: Infinity, ease: "easeInOut" as const };
+  const base = { duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" as const };
   const { category, slug } = ex;
 
   if (category === "relaksasi") {
-    // gentle pulse / scale — eyes closed, breathing
-    return { animate: { r: [14, 22, 14] }, transition: { ...base, duration: 3 } };
+    // gentle breathing pulse — eyes closed, calm
+    return {
+      animate: { scale: [1, 1.25, 1], opacity: [0.7, 1, 0.7] },
+      transition: { ...base, duration: 3 },
+    };
   }
   if (category === "fokus") {
-    // dot grows (near) and shrinks (far) — near<->far focus shift
-    return { animate: { r: [26, 9, 26] }, transition: { ...base, duration: 3 } };
+    // square grows (near) and shrinks (far) — near<->far focus shift
+    return { animate: { scale: [0.6, 1.4, 0.6] }, transition: { ...base, duration: 3 } };
   }
-  // gerakan — dot traces the pattern
+  // gerakan — focus square traces the pattern (cx/cy in 0–200 viewBox → /2 = %)
   switch (slug) {
     case "figure-8":
       return {
         animate: {
-          cx: [100, 150, 150, 100, 50, 50, 100],
-          cy: [100, 70, 130, 100, 130, 70, 100],
+          left: ["50%", "75%", "75%", "50%", "25%", "25%", "50%"],
+          top: ["50%", "35%", "65%", "50%", "65%", "35%", "50%"],
         },
         transition: base,
       };
     case "eye-rolling":
       return {
-        animate: { cx: [100, 160, 100, 40, 100], cy: [40, 100, 160, 100, 40] },
+        animate: {
+          left: ["50%", "80%", "50%", "20%", "50%"],
+          top: ["20%", "50%", "80%", "50%", "20%"],
+        },
         transition: base,
       };
     case "atas-bawah-kiri-kanan":
       return {
         animate: {
-          cx: [100, 100, 100, 40, 160, 100],
-          cy: [45, 155, 100, 100, 100, 100],
+          left: ["50%", "50%", "50%", "20%", "80%", "50%"],
+          top: ["22%", "78%", "50%", "50%", "50%", "50%"],
         },
         transition: base,
       };
     case "zig-zag":
+      // sweep left–right while appearing/disappearing
       return {
-        animate: { cx: [40, 160, 40, 160, 40], cy: [50, 90, 130, 170, 50] },
+        animate: {
+          left: ["20%", "80%", "20%", "80%", "20%"],
+          top: ["25%", "45%", "65%", "85%", "25%"],
+          opacity: [1, 0.15, 1, 0.15, 1],
+        },
         transition: base,
       };
     case "diagonal-gaze":
       return {
-        animate: { cx: [40, 160, 40, 160, 40], cy: [40, 160, 40, 160, 40] },
+        animate: {
+          left: ["20%", "80%", "20%", "80%", "20%"],
+          top: ["20%", "80%", "20%", "80%", "20%"],
+        },
         transition: base,
       };
     default:
       return {
-        animate: { cx: [40, 160, 40], cy: [100, 100, 100] },
+        animate: { left: ["20%", "80%", "20%"], top: ["50%", "50%", "50%"] },
         transition: base,
       };
+  }
+}
+
+function FocusIcon({ slug, className }: { slug: string; className?: string }) {
+  switch (slug) {
+    case "blinking":
+      return <Eye className={className} aria-hidden />;
+    case "near-far-focus":
+      return <Target className={className} aria-hidden />;
+    case "figure-8":
+      return <Infinity className={className} aria-hidden />;
+    case "eye-rolling":
+      return <RefreshCw className={className} aria-hidden />;
+    case "atas-bawah-kiri-kanan":
+      return <ArrowUpDown className={className} aria-hidden />;
+    case "zig-zag":
+      return <Activity className={className} aria-hidden />;
+    case "diagonal-gaze":
+      return <MoveDiagonal className={className} aria-hidden />;
+    default:
+      return <Eye className={className} aria-hidden />;
   }
 }
 
 function EyeAnimation({
   exercise,
   reduceMotion,
+  speed = "normal",
 }: {
   exercise: Exercise;
   reduceMotion: boolean;
+  speed?: "normal" | "fast" | "slow";
 }) {
   const motionProps = buildEyeMotion(exercise, reduceMotion);
+  const durMult = speed === "fast" ? 0.5 : speed === "slow" ? 1.6 : 1;
+  const transition = motionProps
+    ? { ...motionProps.transition, duration: motionProps.transition.duration * durMult }
+    : undefined;
+  const focusClass =
+    "absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/40";
   return (
-    <svg
-      viewBox="0 0 200 200"
-      className="h-44 w-44 sm:h-52 sm:w-52"
+    <div
+      className="relative h-44 w-44 sm:h-52 sm:w-52"
       role="img"
       aria-label={`Ilustrasi gerakan mata untuk ${NAME_BY_SLUG[exercise.slug] ?? exercise.slug}`}
     >
-      <ellipse cx="100" cy="100" rx="84" ry="50" className="fill-secondary" />
-      <ellipse
-        cx="100"
-        cy="100"
-        rx="84"
-        ry="50"
-        className="fill-none stroke-border"
-        strokeWidth="2"
-      />
-      {motionProps ? (
-        <motion.circle
-          cx={100}
-          cy={100}
-          r={14}
-          className="fill-primary"
-          animate={motionProps.animate}
-          transition={motionProps.transition}
+      <svg viewBox="0 0 200 200" className="absolute inset-0 h-full w-full">
+        <ellipse cx="100" cy="100" rx="84" ry="50" className="fill-secondary" />
+        <ellipse
+          cx="100"
+          cy="100"
+          rx="84"
+          ry="50"
+          className="fill-none stroke-border"
+          strokeWidth="2"
         />
+      </svg>
+      {motionProps ? (
+        <motion.div
+          className={focusClass}
+          animate={motionProps.animate}
+          transition={transition}
+        >
+          <FocusIcon slug={exercise.slug} className="h-5 w-5" />
+        </motion.div>
       ) : (
-        <circle cx={100} cy={100} r={14} className="fill-primary" />
+        <div className={focusClass}>
+          <FocusIcon slug={exercise.slug} className="h-5 w-5" />
+        </div>
       )}
-    </svg>
+    </div>
   );
 }
 
@@ -215,6 +262,7 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
   const machineRef = React.useRef<DetailMachine | null>(null);
   const [done, setDone] = React.useState(false);
   const [repVersion, setRepVersion] = React.useState(0);
+  const [speed, setSpeed] = React.useState<"normal" | "fast" | "slow">("normal");
 
   if (machineRef.current === null) {
     machineRef.current = createDetailMachine(exercise, {
@@ -278,10 +326,35 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
       {/* Animation + movement hint */}
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-8">
-          <EyeAnimation exercise={exercise} reduceMotion={reduceMotion} />
+          <EyeAnimation
+            exercise={exercise}
+            reduceMotion={reduceMotion}
+            speed={speed}
+          />
           <p className="max-w-md text-center text-sm text-muted-foreground">
             {motionHint(exercise)}
           </p>
+          {exercise.slug === "figure-8" && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="text-sm text-muted-foreground">Kecepatan:</span>
+              {(["slow", "normal", "fast"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSpeed(s)}
+                  aria-pressed={speed === s}
+                  className={
+                    "rounded-full border px-3 py-1 text-sm transition-colors " +
+                    (speed === s
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:text-foreground")
+                  }
+                >
+                  {s === "slow" ? "Lambat" : s === "fast" ? "Cepat" : "Normal"}
+                </button>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

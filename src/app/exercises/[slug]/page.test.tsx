@@ -35,18 +35,18 @@ beforeAll(() => {
 
 describe("ExerciseDetailPage", () => {
   it("renders heading, steps, and the Selesai button for a valid slug", () => {
-    render(<ExerciseDetailPage params={{ slug: "palming" }} />);
+    render(<ExerciseDetailPage params={{ slug: "blinking" }} />);
 
     // Heading (exercise name) is present.
     expect(
-      screen.getByRole("heading", { level: 1, name: /Palming/i }),
+      screen.getByRole("heading", { level: 1, name: /Kedip Cepat/i }),
     ).toBeInTheDocument();
 
     // Step-by-step instructions render.
     expect(
-      screen.getByText(/Gosok kedua telapak tangan/i),
+      screen.getByText(/Kedip cepat dan penuh/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Tarik napas dalam/i)).toBeInTheDocument();
+    expect(screen.getByText(/Istirahat sejenak 5 detik/i)).toBeInTheDocument();
 
     // The force-done "Selesai" button exists.
     expect(
