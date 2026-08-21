@@ -27,6 +27,33 @@ export function Navbar() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Lock body scroll when sidebar is open (standard mobile architecture)
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  // Close sidebar on Escape key press (keyboard accessibility)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
   return (
     <header className="sticky top-0 z-navbar w-full border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <nav
@@ -71,51 +98,51 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Drawer/Sidebar panel */}
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-backdrop bg-black/60 backdrop-blur-sm md:hidden animate-in fade-in"
+      {/* Mobile Drawer/Sidebar panel (Always rendered for smooth GPU-accelerated transition, hidden via translation off-screen) */}
+      {/* Backdrop */}
+      <div
+        className={cn(
+          "fixed inset-0 z-backdrop bg-black/60 backdrop-blur-sm md:hidden transition-opacity duration-300",
+          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        )}
+        onClick={() => setIsOpen(false)}
+      />
+      {/* Slide-out Sidebar container */}
+      <div
+        className={cn(
+          "fixed right-0 top-0 bottom-0 z-sidebar w-72 bg-background border-l border-border p-6 shadow-2xl flex flex-col gap-6 transition-transform duration-300 ease-in-out md:hidden",
+          isOpen ? "translate-x-0" : "translate-x-full"
+        )}
+      >
+        {/* Sidebar Header inside drawer */}
+        <div className="flex items-center justify-between border-b border-border/40 pb-4 shrink-0">
+          <span className="font-semibold text-foreground text-sm">Navigasi</span>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setIsOpen(false)}
-          />
-          {/* Slide-out Sidebar container */}
-          <div
-            className={cn(
-              "fixed right-0 top-0 bottom-0 z-sidebar w-72 bg-background border-l border-border p-6 shadow-2xl flex flex-col gap-6 transition-all duration-300 md:hidden animate-in slide-in-from-right"
-            )}
+            aria-label="Tutup menu"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
           >
-            {/* Sidebar Header inside drawer */}
-            <div className="flex items-center justify-between border-b border-border/40 pb-4 shrink-0">
-              <span className="font-semibold text-foreground text-sm">Navigasi</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsOpen(false)}
-                aria-label="Tutup menu"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
 
-            {/* Navigation Links */}
-            <div className="flex flex-col gap-2">
-              {navLinks.map((link) => (
-                <Button
-                  key={link.href}
-                  asChild
-                  variant="ghost"
-                  className="w-full justify-start text-foreground text-sm font-medium h-10 px-3"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <Link href={link.href}>{link.label}</Link>
-                </Button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+        {/* Navigation Links */}
+        <div className="flex flex-col gap-2">
+          {navLinks.map((link) => (
+            <Button
+              key={link.href}
+              asChild
+              variant="ghost"
+              className="w-full justify-start text-foreground text-sm font-medium h-10 px-3"
+              onClick={() => setIsOpen(false)}
+            >
+              <Link href={link.href}>{link.label}</Link>
+            </Button>
+          ))}
+        </div>
+      </div>
     </header>
   );
 }
