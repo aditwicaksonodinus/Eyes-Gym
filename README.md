@@ -42,6 +42,18 @@ Pengingat notifikasi 20-20-20 **hanya berjalan saat tab terbuka** (termasuk saat
 - Analytics privasi (Plausible/Umami) bersifat opsional dan **belum dihubungkan di v1**.
 - Tes mata hanya untuk skrining. Jika Anda mengalami keluhan mata berkelanjutan, **konsultasikan ke dokter mata (optalmologis)**. Aplikasi ini tidak menggantikan saran medis profesional.
 
+## Pengembangan (Development)
+
+`npm run dev` menjalankan `next dev` melalui pembungkus tipis tanpa dependensi: `scripts/dev-logger.mjs`. Tujuannya agar **error/kompilasi Next.js cepat terlihat dan mudah dibaca** di terminal — tanpa menyembunyikan atau membuang satupun baris output.
+
+- Setiap baris output `next dev` diteruskan apa adanya; hanya baris yang terdeteksi sebagai **error** (`✗ ERROR`) atau **warning** (`⚠ WARN`) yang diberi awalan berwarna agar menonjol di tengah noise.
+- Tidak ada filter, tidak ada baris yang dihapus — error tetap utuh dan tidak hilang.
+- Warna otomatis dimatikan saat tidak terhubung ke terminal asli (mis. log CI) agar tidak menghasilkan karakter acak.
+- `Ctrl+C` diteruskan ke Next.js sehingga proses berhenti bersih. Kode keluar `next dev` dipertahankan.
+- `build` dan `start` tidak diubah dan tidak menggunakan pembungkus ini.
+
+Untuk menjalankan Next.js dev secara langsung tanpa pembungkus (mis. debugging pembungkus itu sendiri), jalankan `npx next dev`.
+
 ## Lisensi
 
 Proyek ini dirilis di bawah lisensi **MIT**. Lihat berkas [`LICENSE`](./LICENSE).
