@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" suppressHydrationWarning>
-      <body className="min-h-screen font-sans text-calm-900 antialiased dark:text-calm-50">
+      <body className="min-h-screen font-sans text-foreground antialiased">
         <ThemeProvider>
           <main className="mx-auto max-w-6xl px-4">{children}</main>
         </ThemeProvider>
