@@ -5,10 +5,10 @@ import { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Senam Mata",
-    short_name: "Senam Mata",
+    name: "SeeFit",
+    short_name: "SeeFit",
     description:
-      "Aplikasi web untuk meredakan kelelahan mata akibat layar: tes mata mandiri, latihan mata terpandu, dan pengingat 20-20-20.",
+      "Latihan mata singkat untuk meredakan kelelahan layar. Tes mandiri, panduan terpandu, dan pengingat 20-20-20 — langsung di peramban.",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

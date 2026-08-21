@@ -6,11 +6,11 @@ test("landing page renders Indonesian title/markup", async ({ page }) => {
   // html lang is "id"
   await expect(page.locator("html")).toHaveAttribute("lang", "id");
 
-  // Indonesian heading from the placeholder landing
+  // Navbar brand logo text
   await expect(
-    page.getByRole("heading", { name: "Senam Mata" })
+    page.getByRole("link", { name: "SeeFit" })
   ).toBeVisible();
 
   // Indonesian metadata <title>
-  await expect(page).toHaveTitle(/Senam Mata/);
+  await expect(page).toHaveTitle(/SeeFit/);
 });

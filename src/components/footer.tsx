@@ -22,7 +22,7 @@ export function Footer() {
     <footer className="mt-auto border-t border-border bg-background">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-6 sm:flex-row">
         <p className="text-sm text-muted-foreground">
-          Senam Mata — latihan kesehatan mata untuk pekerja layar.
+          SeeFit — Luangkan 2 menit. Matamu akan berterima kasih.
         </p>
         <Link
           href={GITHUB_URL}

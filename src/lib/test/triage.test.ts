@@ -73,7 +73,7 @@ describe("triage — borderline branch", () => {
     const res = triage({ acuity, symptomScore: 0 });
     expect(res.branch).toBe("borderline");
     expect(res.cta).toBe("exercise");
-    expect(res.ctaLabel).toBe("Mulai Senam Mata");
+    expect(res.ctaLabel).toBe("Mulai Latihan");
   });
 
   it("borderline via symptomScore 3–4 with healthy acuity", () => {

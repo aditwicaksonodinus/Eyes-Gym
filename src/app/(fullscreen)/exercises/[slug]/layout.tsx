@@ -25,7 +25,7 @@ export async function generateMetadata({
   };
   const displayName = exercise ? (nameMap[exercise.slug] ?? exercise.slug) : "Latihan";
   return {
-    title: `${displayName} — Senam Mata`,
+    title: `${displayName} — SeeFit`,
     description: `Panduan latihan ${displayName}: animasi gerakan mata, timer, dan instruksi langkah demi langkah.`,
   };
 }

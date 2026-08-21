@@ -113,8 +113,8 @@ export function triage({ acuity, symptomScore }: TriageInput): TriageResult {
   return {
     branch: "borderline",
     cta: "exercise",
-    ctaLabel: "Mulai Senam Mata",
-    message: "Mata lelah — coba senam mata 2 minggu lalu tes ulang.",
+    ctaLabel: "Mulai Latihan",
+    message: "Mata lelah — coba latihan SeeFit 2 minggu, lalu tes ulang.",
     disclaimer: DISCLAIMER,
   };
 }

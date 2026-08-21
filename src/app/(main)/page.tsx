@@ -68,9 +68,9 @@ export default function Home() {
             Jaga kesehatan mata di tengah rutinitas layar
           </h1>
           <p className="max-w-xl text-pretty text-lg text-muted-foreground">
-            Mata lelah setelah berjam-jam menatap layar? Senam Mata membantu
-            meredakan ketegangan dengan latihan singkat dan tes mandiri yang
-            berjalan sepenuhnya di peramban Anda.
+            Mata lelah setelah berjam-jam menatap layar? SeeFit membantu
+            meredakan ketegangan dengan latihan singkat yang bisa kamu lakukan
+            dari kursimu — sepenuhnya di peramban, tanpa instalasi.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg" className="gap-2">
@@ -81,7 +81,7 @@ export default function Home() {
             </Button>
             <Button asChild size="lg" variant="outline" className="gap-2">
               <Link href="/exercises">
-                Mulai Senam Mata
+                Mulai Latihan
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </Button>

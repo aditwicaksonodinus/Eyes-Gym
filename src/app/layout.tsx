@@ -4,9 +4,9 @@ import ThemeProvider from "@/components/ThemeProvider";
 import OrientationGate from "@/components/orientation-gate";
 
 export const metadata: Metadata = {
-  title: "Senam Mata — Latihan Kesehatan Mata untuk Pekerja Layar",
+  title: "SeeFit — Luangkan 2 Menit. Matamu Akan Berterima Kasih.",
   description:
-    "Kurangi kelelahan mata akibat menatap layar dengan latihan mata terpandu, tes mandiri, dan pengingat 20-20-20.",
+    "Mata lelah karena layar? SeeFit menyediakan latihan mata terpandu, tes mandiri, dan pengingat 20-20-20 — semuanya langsung di peramban, tanpa instalasi.",
 };
 
 /**
