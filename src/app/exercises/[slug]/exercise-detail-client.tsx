@@ -5,19 +5,12 @@ import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import {
-  Activity,
   ArrowLeft,
   ArrowRight,
-  ArrowUpDown,
   CheckCircle2,
-  Eye,
-  Infinity,
-  MoveDiagonal,
   Pause,
   Play,
-  RefreshCw,
   RotateCcw,
-  Target,
 } from "lucide-react";
 
 import TargetWrapper from "@/components/TargetWrapper";
@@ -40,6 +33,7 @@ import {
   type ExerciseCategory,
 } from "@/lib/exercises";
 import { createDetailMachine, type DetailMachine } from "@/lib/gym/detailMachine";
+import { buildEyeMotion, FocusIcon } from "@/lib/gym/eyeMotion";
 import { useTimer } from "@/lib/useTimer";
 import { useAppStore } from "@/store/appStore";
 
@@ -91,132 +85,6 @@ function motionHint(ex: Exercise): string {
       return "Mata bergerak menyilang secara diagonal.";
     default:
       return "Ikuti gerakan mata sesuai panduan.";
-  }
-}
-
-type EyeMotion = {
-  animate: Record<string, (number | string)[]>;
-  transition: { duration: number; repeat: number; ease: "easeInOut" | "linear" };
-};
-
-function circleKeyframes(radiusPct: number, points = 16): {
-  x: string[];
-  y: string[];
-} {
-  const x: string[] = [];
-  const y: string[] = [];
-  for (let i = 0; i <= points; i++) {
-    const a = (i / points) * Math.PI * 2;
-    x.push(`${(Math.cos(a) * radiusPct).toFixed(1)}%`);
-    y.push(`${(-Math.sin(a) * radiusPct).toFixed(1)}%`);
-  }
-  return { x, y };
-}
-
-/**
- * Builds the Framer Motion keyframes that illustrate each exercise's pattern.
- *
- * Movement is expressed as `x`/`y` percentage offsets of a full-stage flex
- * container, so the focus icon (centered inside it) is translated by that
- * fraction of the stage. Using transforms instead of `left`/`top` keeps the
- * animation GPU-friendly and light. relaksasi/fokus pulse via scale instead of
- * moving. Every keyframe is a plain linear array (no logarithmic/quadratic
- * math) so it stays cheap and responsive.
- *
- * Offsets are relative to the stage centre (0% = centre). A value of "30%"
- * moves the icon to 80% of the stage width/height.
- */
-function buildEyeMotion(ex: Exercise, reduce: boolean): EyeMotion | null {
-  if (reduce) return null;
-  const { category, slug } = ex;
-
-  if (category === "relaksasi") {
-    // Kedip Cepat: one clear blink (close → open) followed by a short rest,
-    // then repeats. scaleY about the centred icon reads as an eyelid.
-    return {
-      animate: { scaleY: [1, 0.05, 1, 1], scaleX: [1, 1, 1, 1] },
-      transition: { duration: 1.4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
-    };
-  }
-  if (category === "fokus") {
-    // Near–far focus: the object grows (near) and shrinks (far).
-    return {
-      animate: { scale: [0.6, 1.4, 0.6] },
-      transition: { duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
-    };
-  }
-
-  // gerakan — the focus icon traces the pattern via x/y offsets (centre = 0%).
-  // Linear easing keeps motion cheap and continuous (case 3); no easing means
-  // the speed control is immediately visible (case 5).
-  const move = { duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "linear" as const };
-  switch (slug) {
-    case "figure-8":
-      return {
-        animate: {
-          x: ["0%", "30%", "30%", "0%", "-30%", "-30%", "0%"],
-          y: ["0%", "-18%", "18%", "0%", "18%", "-18%", "0%"],
-        },
-        transition: move,
-      };
-    case "eye-rolling":
-      // True smooth circle traced by 16+ ring points (case 6).
-      return {
-        animate: circleKeyframes(30, 24),
-        transition: move,
-      };
-    case "atas-bawah-kiri-kanan":
-      return {
-        animate: {
-          x: ["0%", "0%", "0%", "-30%", "30%", "0%"],
-          y: ["-28%", "28%", "0%", "0%", "0%", "0%"],
-        },
-        transition: move,
-      };
-    case "zig-zag":
-      // Sweep left–right while descending. Movement only — no fade (case 7).
-      return {
-        animate: {
-          x: ["-30%", "30%", "-30%", "30%", "-30%"],
-          y: ["-25%", "-5%", "15%", "35%", "-25%"],
-        },
-        transition: move,
-      };
-    case "diagonal-gaze":
-      // Diagonal moves covering all four directions (TL↔BR and TR↔BL both ways).
-      return {
-        animate: {
-          x: ["-30%", "30%", "30%", "-30%", "-30%", "30%", "30%", "-30%"],
-          y: ["-30%", "30%", "-30%", "30%", "30%", "-30%", "-30%", "30%"],
-        },
-        transition: move,
-      };
-    default:
-      return {
-        animate: { x: ["-30%", "30%", "-30%"], y: ["0%", "0%", "0%"] },
-        transition: move,
-      };
-  }
-}
-
-function FocusIcon({ slug, className }: { slug: string; className?: string }) {
-  switch (slug) {
-    case "blinking":
-      return <Eye className={className} aria-hidden />;
-    case "near-far-focus":
-      return <Target className={className} aria-hidden />;
-    case "figure-8":
-      return <Infinity className={className} aria-hidden />;
-    case "eye-rolling":
-      return <RefreshCw className={className} aria-hidden />;
-    case "atas-bawah-kiri-kanan":
-      return <ArrowUpDown className={className} aria-hidden />;
-    case "zig-zag":
-      return <Activity className={className} aria-hidden />;
-    case "diagonal-gaze":
-      return <MoveDiagonal className={className} aria-hidden />;
-    default:
-      return <Eye className={className} aria-hidden />;
   }
 }
 
