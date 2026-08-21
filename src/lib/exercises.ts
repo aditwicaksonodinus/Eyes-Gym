@@ -51,38 +51,15 @@ export const REMINDER_DURATION_SEC = 20;
 
 export const EXERCISES: readonly Exercise[] = [
   {
-    slug: "20-20-20",
-    nameId: "exercise.20-20-20.name",
-    category: "relaksasi",
-    durationSec: 20,
-    steps: [
-      "Setiap 20 menit, alihkan pandangan dari layar.",
-      "Lihat objek sejauh ±6 meter (20 kaki) selama 20 detik.",
-    ],
-    descriptionId: "exercise.20-20-20.description",
-  },
-  {
-    slug: "palming",
-    nameId: "exercise.palming.name",
-    category: "relaksasi",
-    durationSec: { min: 30, max: 60 },
-    steps: [
-      "Gosok kedua telapak tangan hingga hangat.",
-      "Tutup mata dan sandarkan telapak tangan di atas mata tanpa menekan bola mata.",
-      "Tarik napas dalam dan rileks selama 30–60 detik.",
-    ],
-    descriptionId: "exercise.palming.description",
-  },
-  {
     slug: "blinking",
     nameId: "exercise.blinking.name",
     category: "relaksasi",
-    durationSec: { min: 10, max: 10 },
-    reps: 3,
+    durationSec: 30,
     steps: [
-      "Kedip cepat 15–20 kali.",
-      "Tutup mata dan rileks selama 10 detik.",
-      "Ulangi hingga 3 set.",
+      "Mulai timer 30 detik.",
+      "Kedip cepat dan penuh selama 10 detik (mata terbuka lebar lalu terpejam).",
+      "Istirahat sejenak 5 detik dengan mata terbuka santai (jeda).",
+      "Ulangi siklus kedip–jeda hingga timer habis, 3 siklus.",
     ],
     descriptionId: "exercise.blinking.description",
   },
@@ -94,7 +71,7 @@ export const EXERCISES: readonly Exercise[] = [
     reps: 10,
     steps: [
       "Fokus ke ibu jari/objek ±15 cm dari wajah selama 10–15 detik.",
-      "Alihkan fokus ke objek jauh ±6 meter selama 10–15 detik.",
+      "Alihkan fokus ke objek jauh ±6 meter selama 10–15 detik (aturan 20-20-20: lihat jauh setiap 20 menit).",
       "Ulangi hingga 10 repetisi.",
     ],
     descriptionId: "exercise.near-far-focus.description",
@@ -107,7 +84,7 @@ export const EXERCISES: readonly Exercise[] = [
     reps: 2,
     steps: [
       "Bayangkan angka 8 besar sejauh ±3 meter.",
-      "Telusuri dengan gerakan mata selama 30 detik, kepala tetap diam.",
+      "Telusuri dengan gerakan mata, bisa cepat atau lambat (atur kecepatan).",
       "Balik arah dan ulangi (2 arah).",
     ],
     descriptionId: "exercise.figure-8.description",
@@ -139,25 +116,13 @@ export const EXERCISES: readonly Exercise[] = [
     descriptionId: "exercise.atas-bawah-kiri-kanan.description",
   },
   {
-    slug: "pencil-push-up",
-    nameId: "exercise.pencil-push-up.name",
-    category: "fokus",
-    durationSec: { min: 5, max: 10 },
-    reps: { min: 5, max: 10 },
-    steps: [
-      "Rentangkan lengan dengan pensil/ibu jari di depan mata.",
-      "Fokus pada pensil sambil mendekatkannya ke hidung sampai terlihat ganda.",
-      "Kembalikan lengan ke posisi awal. Ulangi 5–10 repetisi.",
-    ],
-    descriptionId: "exercise.pencil-push-up.description",
-  },
-  {
     slug: "zig-zag",
     nameId: "exercise.zig-zag.name",
     category: "gerakan",
     durationSec: 30,
     steps: [
-      "Gerakkan mata mengikuti pola zig-zag di ruangan atau imajiner.",
+      "Gerakkan mata mengikuti pola zig-zag, fokus pada objek yang muncul dan hilang kiri–kanan.",
+      "Saat objek muncul, kunci fokus; saat hilang, pindah pandangan ke sisi berikutnya.",
       "Lakukan selama 30 detik dengan kepala tetap diam.",
     ],
     descriptionId: "exercise.zig-zag.description",
@@ -189,8 +154,8 @@ export const EXERCISE_CATEGORIES = {
 
 /** Exact slug → category mapping expected by the spec (test-enforced). */
 export const CATEGORY_SLUGS: Readonly<Record<ExerciseCategory, readonly string[]>> = {
-  relaksasi: ["palming", "blinking", "20-20-20"],
-  fokus: ["near-far-focus", "pencil-push-up"],
+  relaksasi: ["blinking"],
+  fokus: ["near-far-focus"],
   gerakan: ["figure-8", "eye-rolling", "atas-bawah-kiri-kanan", "zig-zag", "diagonal-gaze"],
 };
 

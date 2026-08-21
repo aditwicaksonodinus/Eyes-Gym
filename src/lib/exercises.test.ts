@@ -30,13 +30,13 @@ describe("exercise registry", () => {
     expect(EXERCISE_CATEGORIES.gerakan).toBe("gerakan");
   });
 
-  it("has EXACTLY 10 exercises", () => {
-    expect(EXERCISES).toHaveLength(10);
+  it("has EXACTLY 7 exercises (palming & pencil-push-up removed, 20-20-20 merged into near-far-focus)", () => {
+    expect(EXERCISES).toHaveLength(7);
   });
 
-  it("all 10 slugs are unique and URL-safe (^[a-z0-9-]+$)", () => {
+  it("all 7 slugs are unique and URL-safe (^[a-z0-9-]+$)", () => {
     const slugs = EXERCISES.map((ex) => ex.slug);
-    expect(new Set(slugs).size).toBe(10);
+    expect(new Set(slugs).size).toBe(7);
     for (const slug of slugs) {
       expect(slug).toMatch(/^[a-z0-9-]+$/);
       expect(slug).not.toMatch(/\s/);
@@ -63,21 +63,11 @@ describe("exercise registry", () => {
   });
 
   describe("spec §2 exact durations/reps", () => {
-    it("20-20-20 Rule = 20 detik (time-based duration)", () => {
-      const ex = getExercise("20-20-20")!;
-      expect(ex.durationSec).toBe(20);
-      expect(durationBounds("20-20-20")).toEqual({ min: 20, max: 20 });
+    it("Blinking = 30 detik (timer + jeda)", () => {
+      expect(durationBounds("blinking")).toEqual({ min: 30, max: 30 });
     });
 
-    it("Palming = 30–60 detik", () => {
-      expect(durationBounds("palming")).toEqual({ min: 30, max: 60 });
-    });
-
-    it("Blinking cepat = 3 set", () => {
-      expect(repBounds("blinking")).toEqual({ min: 3, max: 3 });
-    });
-
-    it("Near-Far Focus = 10 repetisi", () => {
+    it("Near-Far Focus = 10 repetisi (includes 20-20-20 concept)", () => {
       expect(repBounds("near-far-focus")).toEqual({ min: 10, max: 10 });
     });
 
@@ -92,10 +82,6 @@ describe("exercise registry", () => {
 
     it("Gerakan Atas-Bawah & Kiri-Kanan = 3 repetisi per arah", () => {
       expect(repBounds("atas-bawah-kiri-kanan")).toEqual({ min: 3, max: 3 });
-    });
-
-    it("Pencil Push-up = 5–10 repetisi", () => {
-      expect(repBounds("pencil-push-up")).toEqual({ min: 5, max: 10 });
     });
 
     it("Zig-Zag = 30 detik", () => {
@@ -115,19 +101,18 @@ describe("exercise registry", () => {
     }
   });
 
-  describe("category mapping (exact 10 slug→category expectations)", () => {
-    it("relaksasi = palming, blinking, 20-20-20", () => {
-      expect(CATEGORY_SLUGS.relaksasi).toEqual(["palming", "blinking", "20-20-20"]);
+  describe("category mapping (exact 7 slug→category expectations)", () => {
+    it("relaksasi = blinking", () => {
+      expect(CATEGORY_SLUGS.relaksasi).toEqual(["blinking"]);
       expect(filterByCategory("relaksasi").map((e) => e.slug).sort()).toEqual(
-        ["palming", "blinking", "20-20-20"].sort(),
+        ["blinking"].sort(),
       );
     });
 
-    it("fokus = near-far-focus, pencil-push-up", () => {
-      expect(CATEGORY_SLUGS.fokus).toEqual(["near-far-focus", "pencil-push-up"]);
+    it("fokus = near-far-focus", () => {
+      expect(CATEGORY_SLUGS.fokus).toEqual(["near-far-focus"]);
       expect(filterByCategory("fokus").map((e) => e.slug).sort()).toEqual([
         "near-far-focus",
-        "pencil-push-up",
       ]);
     });
 
@@ -150,16 +135,16 @@ describe("exercise registry", () => {
 
     it("every registered slug appears in exactly one category bucket", () => {
       const union = [...CATEGORY_SLUGS.relaksasi, ...CATEGORY_SLUGS.fokus, ...CATEGORY_SLUGS.gerakan];
-      expect(union.length).toBe(10);
-      expect(new Set(union).size).toBe(10); // no duplicates across buckets
+      expect(union.length).toBe(7);
+      expect(new Set(union).size).toBe(7); // no duplicates across buckets
       expect(union.sort()).toEqual(EXERCISES.map((e) => e.slug).sort());
     });
   });
 
   describe("helpers", () => {
     it("getExercise returns the exercise by slug", () => {
-      expect(getExercise("palming")?.category).toBe("relaksasi");
-      expect(getExercise("palming")?.nameId).toBe("exercise.palming.name");
+      expect(getExercise("blinking")?.category).toBe("relaksasi");
+      expect(getExercise("blinking")?.nameId).toBe("exercise.blinking.name");
     });
 
     it("getExercise returns undefined for unknown slug", () => {
@@ -167,14 +152,14 @@ describe("exercise registry", () => {
     });
 
     it("filterByDuration matches fixed durations", () => {
-      expect(filterByDuration(20).map((e) => e.slug)).toContain("20-20-20");
+      expect(filterByDuration(30).map((e) => e.slug)).toContain("blinking");
       expect(filterByDuration(30).map((e) => e.slug)).toContain("zig-zag");
     });
 
     it("filterByDuration matches overlapping ranges", () => {
-      // Palming 30–60 overlaps [30,60]; not [100,200]
-      expect(filterByDuration(30, 45).map((e) => e.slug)).toContain("palming");
-      expect(filterByDuration(100, 200).map((e) => e.slug)).not.toContain("palming");
+      // Blinking 30 overlaps [30,45]; not [100,200]
+      expect(filterByDuration(30, 45).map((e) => e.slug)).toContain("blinking");
+      expect(filterByDuration(100, 200).map((e) => e.slug)).not.toContain("blinking");
     });
 
     it("filterByDuration returns [] for empty window", () => {

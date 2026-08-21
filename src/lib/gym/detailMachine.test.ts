@@ -23,12 +23,12 @@ function makeFakeClock() {
 describe("createDetailMachine (pure, one-exercise lifecycle, fake clock)", () => {
   it("duration-based: reaches done with remainingSec 0 after the full duration elapses", () => {
     const clock = makeFakeClock();
-    const ex = getExercise("20-20-20")!; // durationSec = 20 (fixed)
+    const ex = getExercise("blinking")!; // durationSec = 30 (fixed)
     const m = createDetailMachine(ex, { clock: clock.now });
 
     expect(m.getState()).toEqual({
       status: "idle",
-      remainingSec: 20,
+      remainingSec: 30,
       done: false,
     });
 
@@ -38,11 +38,11 @@ describe("createDetailMachine (pure, one-exercise lifecycle, fake clock)", () =>
     // Within duration: still counting, not done.
     clock.tick(8000);
     m.tick();
-    expect(m.getState().remainingSec).toBe(12);
+    expect(m.getState().remainingSec).toBe(22);
     expect(m.getState().done).toBe(false);
 
     // Past the duration: done.
-    clock.set(25_000);
+    clock.set(35_000);
     m.tick();
     const s = m.getState();
     expect(s.remainingSec).toBe(0);
@@ -50,64 +50,76 @@ describe("createDetailMachine (pure, one-exercise lifecycle, fake clock)", () =>
     expect(s.status).toBe("done");
   });
 
-  it("duration-based: uses getDurationBounds().max for range durations", () => {
+  it("rep-based: uses getRepBounds().max for range reps", () => {
     const clock = makeFakeClock();
-    const ex = getExercise("palming")!; // durationSec = {min:30,max:60}
+    const ex = getExercise("eye-rolling")!; // reps = {min:5,max:8}
     const m = createDetailMachine(ex, { clock: clock.now });
-    // max = 60s -> full remaining is 60.
-    expect(m.getState().remainingSec).toBe(60);
+    // max = 8 reps -> full remaining is 8.
+    expect(m.getState().remainingReps).toBe(8);
 
     m.start();
-    clock.tick(60_000);
-    m.tick();
-    expect(m.getState().done).toBe(true);
-    expect(m.getState().remainingSec).toBe(0);
+    m.completeRep();
+    m.completeRep();
+    expect(m.getState().remainingReps).toBe(6);
+    expect(m.getState().done).toBe(false);
+
+    // Complete the remaining 6 reps (8 total) to reach done.
+    m.completeRep();
+    m.completeRep();
+    m.completeRep();
+    m.completeRep();
+    m.completeRep();
+    m.completeRep();
+    const s = m.getState();
+    expect(s.remainingReps).toBe(0);
+    expect(s.done).toBe(true);
+    expect(s.status).toBe("done");
   });
 
   it("pause freezes remainingSec; resume preserves elapsed across the paused window", () => {
     const clock = makeFakeClock();
-    const ex = getExercise("20-20-20")!;
+    const ex = getExercise("blinking")!; // durationSec = 30
     const m = createDetailMachine(ex, { clock: clock.now });
 
     m.start();
     clock.tick(4000); // elapsed 4s
     m.tick();
-    expect(m.getState().remainingSec).toBe(16);
+    expect(m.getState().remainingSec).toBe(26);
 
     m.pause();
     expect(m.getState().status).toBe("paused");
-    expect(m.getState().remainingSec).toBe(16);
+    expect(m.getState().remainingSec).toBe(26);
 
     // Time passes while paused -> remaining unchanged.
     clock.set(50_000);
     m.tick();
-    expect(m.getState().remainingSec).toBe(16);
+    expect(m.getState().remainingSec).toBe(26);
     expect(m.getState().done).toBe(false);
 
     // Resume: paused window does not count; remainder preserved.
     m.resume();
     expect(m.getState().status).toBe("running");
-    expect(m.getState().remainingSec).toBe(16);
+    expect(m.getState().remainingSec).toBe(26);
 
     clock.tick(2000); // 2s more elapsed
     m.tick();
-    expect(m.getState().remainingSec).toBe(14);
+    expect(m.getState().remainingSec).toBe(24);
   });
 
   it("reset returns to idle with the full duration", () => {
     const clock = makeFakeClock();
-    const ex = getExercise("20-20-20")!;
+    const ex = getExercise("blinking")!; // durationSec = 30
     const m = createDetailMachine(ex, { clock: clock.now });
 
     m.start();
-    clock.tick(20_000);
+    clock.tick(30_000);
     m.tick();
     expect(m.getState().done).toBe(true);
 
     m.reset();
     expect(m.getState()).toEqual({
       status: "idle",
-      remainingSec: 20,
+      remainingSec: 30,
       done: false,
     });
 
@@ -115,12 +127,12 @@ describe("createDetailMachine (pure, one-exercise lifecycle, fake clock)", () =>
     m.start();
     clock.tick(1000);
     m.tick();
-    expect(m.getState().remainingSec).toBe(19);
+    expect(m.getState().remainingSec).toBe(29);
   });
 
   it("rep-based: completing N reps reaches done with remainingReps 0", () => {
     const clock = makeFakeClock();
-    const ex = getExercise("blinking")!; // reps = 3 (fixed)
+    const ex = getExercise("atas-bawah-kiri-kanan")!; // reps = 3 (fixed)
     const m = createDetailMachine(ex, { clock: clock.now });
 
     expect(m.getState().remainingReps).toBe(3);
@@ -169,8 +181,8 @@ describe("createDetailMachine (pure, one-exercise lifecycle, fake clock)", () =>
 
   it("carries nextSlug for the page-layer Selanjutnya advance", () => {
     const clock = makeFakeClock();
-    const ex = getExercise("20-20-20")!;
-    const m = createDetailMachine(ex, { clock: clock.now, nextSlug: "palming" });
-    expect(m.nextSlug).toBe("palming");
+    const ex = getExercise("figure-8")!;
+    const m = createDetailMachine(ex, { clock: clock.now, nextSlug: "eye-rolling" });
+    expect(m.nextSlug).toBe("eye-rolling");
   });
 });

@@ -7,9 +7,9 @@ import { getExercise } from "@/lib/exercises";
  * machine is exercised against genuine `Exercise` shapes (slug, category, …).
  */
 function makePlaylist() {
-  const a = getExercise("20-20-20")!; // durationSec = 20
-  const b = getExercise("palming")!; // durationSec = {min:30,max:60}
-  const c = getExercise("blinking")!; // reps = 3
+  const a = getExercise("blinking")!; // durationSec = 30
+  const b = getExercise("near-far-focus")!; // durationSec = {min:10,max:15}
+  const c = getExercise("figure-8")!; // durationSec = 30
   return [a, b, c];
 }
 
@@ -23,7 +23,7 @@ describe("createSessionMachine (pure playlist orchestrator, TDD)", () => {
     const s = m.getState();
     expect(s.status).toBe("running");
     expect(s.index).toBe(0);
-    expect(s.currentSlug).toBe("20-20-20");
+    expect(s.currentSlug).toBe("blinking");
     expect(s.total).toBe(3);
     expect(s.completedCount).toBe(0);
     expect(s.done).toBe(false);
@@ -35,29 +35,29 @@ describe("createSessionMachine (pure playlist orchestrator, TDD)", () => {
     const before = m.current();
     expect(before).not.toBeNull();
     expect(before!.index).toBe(0);
-    expect(before!.exercise.slug).toBe("20-20-20");
+    expect(before!.exercise.slug).toBe("blinking");
 
     m.start();
     const cur = m.current();
     expect(cur).not.toBeNull();
     expect(cur!.index).toBe(0);
-    expect(cur!.exercise.slug).toBe("20-20-20");
+    expect(cur!.exercise.slug).toBe("blinking");
   });
 
   it("3-exercise playlist: summary reflects all completed after the last completion", () => {
     const m = createSessionMachine(makePlaylist());
     m.start();
 
-    m.completeCurrent(); // 20-20-20 done -> advance to palming
+    m.completeCurrent(); // blinking done -> advance to near-far-focus
     expect(m.getState().index).toBe(1);
     expect(m.getState().completedCount).toBe(1);
     expect(m.getState().status).toBe("running");
 
-    m.completeCurrent(); // palming done -> advance to blinking
+    m.completeCurrent(); // near-far-focus done -> advance to figure-8
     expect(m.getState().index).toBe(2);
     expect(m.getState().completedCount).toBe(2);
 
-    m.completeCurrent(); // blinking done -> last -> done
+    m.completeCurrent(); // figure-8 done -> last -> done
     const s = m.getState();
     expect(s.status).toBe("done");
     expect(s.done).toBe(true);
@@ -69,7 +69,7 @@ describe("createSessionMachine (pure playlist orchestrator, TDD)", () => {
 
     expect(m.summary()).toEqual({
       totalDone: 3,
-      completedSlugs: ["20-20-20", "palming", "blinking"],
+      completedSlugs: ["blinking", "near-far-focus", "figure-8"],
     });
   });
 
@@ -80,12 +80,12 @@ describe("createSessionMachine (pure playlist orchestrator, TDD)", () => {
     // From index 0, a single next() lands on index 1 — never beyond.
     m.next();
     expect(m.getState().index).toBe(1);
-    expect(m.getState().currentSlug).toBe("palming");
+    expect(m.getState().currentSlug).toBe("near-far-focus");
     expect(m.getState().completedCount).toBe(0); // next() does not complete
 
     m.next();
     expect(m.getState().index).toBe(2);
-    expect(m.getState().currentSlug).toBe("blinking");
+    expect(m.getState().currentSlug).toBe("figure-8");
 
     // On the last exercise, next() finishes the session (no further advance).
     m.next();
@@ -110,7 +110,7 @@ describe("createSessionMachine (pure playlist orchestrator, TDD)", () => {
     const s = m.getState();
     expect(s.status).toBe("idle");
     expect(s.index).toBe(0);
-    expect(s.currentSlug).toBe("20-20-20");
+    expect(s.currentSlug).toBe("blinking");
     expect(s.completedCount).toBe(0);
     expect(s.done).toBe(false);
     expect(m.summary()).toEqual({ totalDone: 0, completedSlugs: [] });
@@ -130,9 +130,9 @@ describe("createSessionMachine (pure playlist orchestrator, TDD)", () => {
     m.completeCurrent();
     m.completeCurrent();
     expect(onComplete).toHaveBeenCalledTimes(3);
-    expect(onComplete).toHaveBeenNthCalledWith(1, "20-20-20", 0);
-    expect(onComplete).toHaveBeenNthCalledWith(2, "palming", 1);
-    expect(onComplete).toHaveBeenNthCalledWith(3, "blinking", 2);
+    expect(onComplete).toHaveBeenNthCalledWith(1, "blinking", 0);
+    expect(onComplete).toHaveBeenNthCalledWith(2, "near-far-focus", 1);
+    expect(onComplete).toHaveBeenNthCalledWith(3, "figure-8", 2);
     expect(onDone).toHaveBeenCalledTimes(1);
 
     // Re-entering done must not re-fire onDone.
