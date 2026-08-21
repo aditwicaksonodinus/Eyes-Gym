@@ -492,12 +492,13 @@ export default function TestPage() {
                   <legend className="text-sm font-medium text-foreground">
                     {q.text}
                   </legend>
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
                     {SYMPTOM_LABELS.map((label, value) => (
                       <Button
                         key={label}
                         type="button"
                         size="sm"
+                        className="w-full text-xs sm:text-sm py-2 h-auto"
                         variant={
                           (answers[q.id] ?? 0) === value
                             ? "default"
