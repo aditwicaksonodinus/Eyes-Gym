@@ -238,8 +238,13 @@ function EyeAnimation({
   return (
     // The focus icon is nested inside the circular field so its x/y offsets
     // stay within the circle instead of the full rectangle.
+    // Responsive: below lg the stage sits in the max-w-4xl column (mobile/
+    // tablet, mx-auto centres it). At lg+ it full-bleeds to the viewport via
+    // w-screen; we drop the auto margin (lg:mx-0) so the flex parent's
+    // items-center centres the 100vw box. No transform/margin — those would
+    // shift it off-centre. No 100vh (misbehaves in webviews).
     <div
-      className="relative mx-auto aspect-video w-full max-w-4xl overflow-hidden rounded-2xl border border-border bg-background"
+      className="relative mx-auto aspect-video w-full max-w-4xl overflow-hidden rounded-2xl border border-border bg-background lg:mx-0 lg:w-screen lg:max-w-none"
       role="img"
       aria-label={`Ilustrasi gerakan mata untuk ${NAME_BY_SLUG[exercise.slug] ?? exercise.slug}`}
     >

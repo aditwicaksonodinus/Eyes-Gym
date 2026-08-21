@@ -22,7 +22,7 @@ export default function RootLayout({
       <body className="flex min-h-screen flex-col font-sans text-foreground antialiased">
         <ThemeProvider>
           <Navbar />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+          <main className="mx-auto w-full max-w-6xl flex-1 overflow-x-hidden px-4 py-8">
             {children}
           </main>
           <Footer />
