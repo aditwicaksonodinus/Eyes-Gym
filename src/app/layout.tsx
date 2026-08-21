@@ -7,6 +7,13 @@ export const metadata: Metadata = {
   title: "SeeFit — Luangkan 2 Menit. Matamu Akan Berterima Kasih.",
   description:
     "Mata lelah karena layar? SeeFit menyediakan latihan mata terpandu, tes mandiri, dan pengingat 20-20-20 — semuanya langsung di peramban, tanpa instalasi.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/icon-192.png",
+  },
 };
 
 /**
