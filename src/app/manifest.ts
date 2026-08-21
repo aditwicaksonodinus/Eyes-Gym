@@ -1,4 +1,7 @@
-import type { MetadataRoute } from "next";
+// Next.js Metadata API manifest — auto-served at /manifest.webmanifest.
+// This is the canonical manifest; do NOT add a second route handler for it
+// (e.g. manifest.webmanifest.ts), or Next will warn about a duplicate page.
+import { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {

@@ -116,7 +116,7 @@ export default function TestPage() {
         setLetterChar(SLOAN[Math.floor(Math.random() * SLOAN.length)]);
       }
     },
-    [currentSide, effDistanceMm, startEye],
+    [effDistanceMm, startEye],
   );
 
   // ── Step 3: symptom questionnaire ──────────────────────────────────────────
@@ -180,7 +180,7 @@ export default function TestPage() {
       };
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto">
       <motion.div key={step} {...motionProps}>
         {step === 0 && (
           <Card>
@@ -293,11 +293,11 @@ export default function TestPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-border bg-background">
+              <div className="relative mx-auto aspect-video w-full overflow-hidden rounded-2xl border border-border bg-background lg:mx-0 lg:w-screen lg:max-w-none">
                 <div className="absolute inset-0 flex items-center justify-center">
                   {/* Circular eye-field background (case 4) — the optotype
                       moves inside this field, not a square. */}
-                  <div className="relative aspect-square h-full rounded-full bg-secondary">
+                  <div className="relative aspect-square h-full bg-secondary">
                     {/* Decorative size-variation chart (kecil → sedang → besar),
                         aria-hidden: purely illustrates that optotypes differ in
                         size; the bright centred letter is the real stimulus. */}

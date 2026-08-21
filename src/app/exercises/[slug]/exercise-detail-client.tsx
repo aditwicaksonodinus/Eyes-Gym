@@ -20,6 +20,7 @@ import {
   Target,
 } from "lucide-react";
 
+import TargetWrapper from "@/components/TargetWrapper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -182,11 +183,11 @@ function buildEyeMotion(ex: Exercise, reduce: boolean): EyeMotion | null {
         transition: move,
       };
     case "diagonal-gaze":
-      // Only diagonal moves through the centre: TL↔BR and TR↔BL (case 8).
+      // Diagonal moves covering all four directions (TL↔BR and TR↔BL both ways).
       return {
         animate: {
-          x: ["-30%", "30%", "0%", "30%", "-30%", "0%", "-30%"],
-          y: ["-30%", "30%", "0%", "-30%", "30%", "0%", "-30%"],
+          x: ["-30%", "30%", "30%", "-30%", "-30%", "30%", "30%", "-30%"],
+          y: ["-30%", "30%", "-30%", "30%", "30%", "-30%", "-30%", "30%"],
         },
         transition: move,
       };
@@ -230,29 +231,14 @@ function EyeAnimation({
 }) {
   const motionProps = buildEyeMotion(exercise, reduceMotion);
   const durMult = speed === "fast" ? 0.5 : speed === "slow" ? 1.6 : 1;
-  const transition = motionProps
-    ? { ...motionProps.transition, duration: motionProps.transition.duration * durMult }
-    : undefined;
-  const focusClass =
-    "flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/40";
+  const transition = motionProps ? { ...motionProps.transition, duration: motionProps.transition.duration * durMult } : undefined;
+  const focusClass = "flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/40";
   return (
-    // The focus icon is nested inside the circular field so its x/y offsets
-    // stay within the circle instead of the full rectangle.
-    // Responsive: below lg the stage sits in the max-w-4xl column (mobile/
-    // tablet, mx-auto centres it). At lg+ it full-bleeds to the viewport via
-    // w-screen; we drop the auto margin (lg:mx-0) so the flex parent's
-    // items-center centres the 100vw box. No transform/margin — those would
-    // shift it off-centre. No 100vh (misbehaves in webviews).
-    <div
-      className="relative mx-auto aspect-video w-full max-w-4xl overflow-hidden rounded-2xl border border-border bg-background lg:mx-0 lg:w-screen lg:max-w-none"
-      role="img"
-      aria-label={`Ilustrasi gerakan mata untuk ${NAME_BY_SLUG[exercise.slug] ?? exercise.slug}`}
-    >
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="relative aspect-square h-full rounded-full bg-secondary">
+      <div className="relative mx-auto aspect-video w-full overflow-hidden rounded-2xl border border-border bg-background lg:mx-0 lg:w-screen lg:max-w-none" role="img" aria-label={`Ilustrasi gerakan mata untuk ${NAME_BY_SLUG[exercise.slug] ?? exercise.slug}`}>
+        <TargetWrapper>
+        <div className="relative aspect-square h-full bg-secondary">
           {motionProps ? (
             <motion.div
-              // key forces a remount when speed changes so the new duration applies.
               key={speed}
               className="absolute inset-0 flex items-center justify-center"
               animate={motionProps.animate}
@@ -270,8 +256,8 @@ function EyeAnimation({
             </div>
           )}
         </div>
+        </TargetWrapper>
       </div>
-    </div>
   );
 }
 
