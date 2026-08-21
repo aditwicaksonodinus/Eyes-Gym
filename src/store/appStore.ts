@@ -55,9 +55,22 @@ export interface ReminderUpdate {
   interval?: number;
 }
 
+/**
+ * A "value moment" is a completed eye test or exercise — the first one signals
+ * the user has actually used the app, which is when we may surface the
+ * permission primer for the 20-20-20 reminder.
+ */
+export interface ReminderMeta {
+  /** Count of completed value moments (tests/exercises). */
+  valueMoments: number;
+  /** Whether the primer modal has been dismissed/seen. */
+  primerShown: boolean;
+}
+
 interface AppState {
   session: SessionState;
   reminder: ReminderPrefs;
+  reminderMeta: ReminderMeta;
   testResults: {
     eye: EyeTestResult;
     questionnaire: QuestionnaireResult[];
@@ -71,6 +84,8 @@ interface AppState {
 
   // Reminder actions
   setReminder(update: ReminderUpdate): void;
+  recordValueMoment(): void;
+  setPrimerShown(value: boolean): void;
 
   // Test-result actions
   setEyeResult(side: EyeSide, device: Device, reading: AcuityReading): void;
@@ -88,6 +103,8 @@ export const initialAppState: Omit<
   | "setCurrentIndex"
   | "completeExercise"
   | "setReminder"
+  | "recordValueMoment"
+  | "setPrimerShown"
   | "setEyeResult"
   | "resetEyeResults"
   | "addQuestionnaire"
@@ -102,6 +119,10 @@ export const initialAppState: Omit<
   reminder: {
     enabled: false,
     interval: 20, // default 20-20-20 rule (min)
+  },
+  reminderMeta: {
+    valueMoments: 0,
+    primerShown: false,
   },
   testResults: {
     eye: { left: {}, right: {} },
@@ -143,6 +164,21 @@ export const useAppStore = create<AppState>()((set) => ({
 
   setReminder(update) {
     set((s) => ({ reminder: { ...s.reminder, ...update } }));
+  },
+
+  recordValueMoment() {
+    set((s) => ({
+      reminderMeta: {
+        ...s.reminderMeta,
+        valueMoments: s.reminderMeta.valueMoments + 1,
+      },
+    }));
+  },
+
+  setPrimerShown(value) {
+    set((s) => ({
+      reminderMeta: { ...s.reminderMeta, primerShown: value },
+    }));
   },
 
   setEyeResult(side, device, reading) {

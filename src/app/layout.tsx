@@ -3,6 +3,7 @@ import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import ReminderGate from "@/components/reminder-gate";
 
 export const metadata: Metadata = {
   title: "Senam Mata — Latihan Kesehatan Mata untuk Pekerja Layar",
@@ -24,6 +25,7 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <ReminderGate />
         </ThemeProvider>
       </body>
     </html>
