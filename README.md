@@ -44,12 +44,14 @@ Pengingat notifikasi 20-20-20 **hanya berjalan saat tab terbuka** (termasuk saat
 
 ## Pengembangan (Development)
 
-`npm run dev` menjalankan `next dev` melalui pembungkus tipis tanpa dependensi: `scripts/dev-logger.mjs`. Tujuannya agar **error/kompilasi Next.js cepat terlihat dan mudah dibaca** di terminal — tanpa menyembunyikan atau membuang satupun baris output.
+`npm run dev` menjalankan `next dev --turbo` (Turbopack) melalui pembungkus tipis tanpa dependensi: `scripts/dev-logger.mjs`. Tujuannya agar **error/kompilasi Next.js cepat terlihat dan mudah dibaca** di terminal — tanpa menyembunyikan atau membuang satupun baris output.
 
+- **Pembersihan port** ditangani oleh hook npm `predev` → `scripts/dev-kill.mjs` (referensi: konvensi `dev:kill` di Landing-CV), sehingga `npm run dev` selalu mematikan paksa proses lain yang menempati port dev (default `3000`) sebelum menjalankan server — jaminan **satu server** tunggal. Bisa dipanggil manual via `npm run dev:kill` (menerima argumen port, mis. `npm run dev:kill -- 3000 3001`).
+- `next dev` dijalankan dengan **Turbopack** (`--turbo`) untuk kompilasi dan logging yang lebih cepat. Lewati dengan argumen `--no-turbo`-equivalent jika diperlukan (mis. `npm run dev -- --turbopack` sudah dianggap aktif; untuk mematikan, sunting skrip atau jalankan `npx next dev`).
 - Setiap baris output `next dev` diteruskan apa adanya; hanya baris yang terdeteksi sebagai **error** (`✗ ERROR`) atau **warning** (`⚠ WARN`) yang diberi awalan berwarna agar menonjol di tengah noise.
 - Tidak ada filter, tidak ada baris yang dihapus — error tetap utuh dan tidak hilang.
 - Warna otomatis dimatikan saat tidak terhubung ke terminal asli (mis. log CI) agar tidak menghasilkan karakter acak.
-- `Ctrl+C` diteruskan ke Next.js sehingga proses berhenti bersih. Kode keluar `next dev` dipertahankan.
+- `Ctrl+C` diteruskan ke **seluruh process group** Next.js (termasuk worker-nya) sehingga semua proses berhenti bersih tanpa meninggalkan proses yatim. Jika Next.js mengabaikan sinyal lunak, pembungkus akan memaksa `SIGKILL` setelah 4 detik. Kode keluar `next dev` dipertahankan.
 - `build` dan `start` tidak diubah dan tidak menggunakan pembungkus ini.
 
 Untuk menjalankan Next.js dev secara langsung tanpa pembungkus (mis. debugging pembungkus itu sendiri), jalankan `npx next dev`.
