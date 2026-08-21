@@ -38,3 +38,4 @@ next-env.d.ts
 
 # generated service worker (built by npm run build)
 /public/sw.js
+.vercel
