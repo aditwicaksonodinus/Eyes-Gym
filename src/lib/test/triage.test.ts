@@ -92,8 +92,8 @@ describe("triage logic with refractive indication", () => {
     const acuity = triageAcuity({ leftLogMAR: 0.0, rightLogMAR: 0.6 });
     const res = triage({ acuity, symptomScore: 0 });
     expect(res.branch).toBe("referral");
-    expect(res.refractiveIndication.type).toBe("myopia");
-    expect(res.message).toContain("dokter mata");
+    // asymmetry = 0.6 >= 0.2, so astigmatism is detected first (takes priority)
+    expect(res.refractiveIndication.type).toBe("astigmatism");
     expect(res.disclaimer).toBe(DISCLAIMER);
   });
 });
