@@ -216,7 +216,7 @@ export default function TestPage() {
     <div className="mx-auto max-w-2xl">
       {/* Step 2: Fullscreen Acuity Test (Mirroring Gym style) */}
       {step === 2 && engineReady && (
-        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        <div className="fixed inset-0 z-fullscreen-page bg-background flex flex-col">
           {/* Background Stage */}
           <div className="fixed inset-0 bg-secondary/40 dark:bg-secondary/20 z-0 pointer-events-none" />
 
@@ -225,7 +225,7 @@ export default function TestPage() {
             initial={{ y: -60, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ type: "spring", damping: 28, stiffness: 280 }}
-            className="fixed inset-x-0 top-0 z-50"
+            className="fixed inset-x-0 top-0 z-fullscreen-page"
             style={{ paddingTop: "env(safe-area-inset-top)" }}
           >
             <div className="mx-3 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-background/80 px-4 py-2.5 shadow-lg shadow-black/5 backdrop-blur-xl dark:bg-background/70">
@@ -274,7 +274,7 @@ export default function TestPage() {
 
           {/* Constrained letter stage / transition jeda screen */}
           {showRightEyeTransition ? (
-            <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-fullscreen-page bg-background flex items-center justify-center p-4">
               <div className="fixed inset-0 bg-secondary/40 dark:bg-secondary/20 z-0 pointer-events-none" />
               <Card className="w-full max-w-md z-10 shadow-2xl border-border/50 bg-background">
                 <CardHeader className="text-center">
@@ -355,7 +355,7 @@ export default function TestPage() {
                 initial={{ y: 100, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ type: "spring", damping: 28, stiffness: 280, delay: 0.1 }}
-                className="fixed inset-x-0 bottom-0 z-50 p-4 flex flex-col md:flex-row justify-between items-end gap-4 pointer-events-none"
+                className="fixed inset-x-0 bottom-0 z-fullscreen-page p-4 flex flex-col md:flex-row justify-between items-end gap-4 pointer-events-none"
                 style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
               >
                 {/* Left panel: Eye indicator and guide (kiri bawah) */}

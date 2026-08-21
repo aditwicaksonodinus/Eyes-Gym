@@ -109,7 +109,7 @@ function InstructionsDrawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-backdrop bg-black/40 backdrop-blur-sm"
             onClick={onClose}
             aria-hidden
           />
@@ -120,7 +120,7 @@ function InstructionsDrawer({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed inset-x-0 bottom-0 z-[61] rounded-t-3xl border-t border-border bg-background/95 px-6 pb-[env(safe-area-inset-bottom)] pt-6 shadow-2xl backdrop-blur-xl"
+            className="fixed inset-x-0 bottom-0 z-sidebar rounded-t-3xl border-t border-border bg-background/95 px-6 pb-[env(safe-area-inset-bottom)] pt-6 shadow-2xl backdrop-blur-xl"
             role="dialog"
             aria-modal
             aria-label="Cara melakukannya"
@@ -391,7 +391,7 @@ function TopHeader({
   };
 
   return (
-    <header className="w-full border-b border-border bg-background px-4 py-3 flex items-center justify-between z-40 shrink-0">
+    <header className="w-full border-b border-border bg-background px-4 py-3 flex items-center justify-between z-navbar shrink-0">
       <div className="flex items-center gap-3 min-w-0">
         <Button asChild variant="ghost" size="sm" className="-ml-1 gap-1.5 text-muted-foreground">
           <Link href="/exercises" aria-label="Kembali ke daftar latihan">
@@ -534,7 +534,7 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
           onClick={() => setFocusMode(!focusMode)}
           aria-label={focusMode ? "Tampilkan semua kontrol" : "Fokus penuh (sembunyikan kontrol)"}
           className={cn(
-            "pointer-events-auto absolute z-50 flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-lg backdrop-blur transition-all duration-300 hover:bg-background bottom-4 right-4",
+            "pointer-events-auto absolute z-toggle flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-lg backdrop-blur transition-all duration-300 hover:bg-background bottom-4 right-4",
             focusMode ? "opacity-50 hover:opacity-100" : "opacity-80 hover:opacity-100"
           )}
         >
@@ -548,7 +548,7 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
 
       {/* ── Bottom Navbar (Footer) ── */}
       {!focusMode && (
-        <footer className="w-full border-t border-border bg-background p-4 z-40 shrink-0">
+        <footer className="w-full border-t border-border bg-background p-4 z-footer shrink-0">
           <BottomPanel
             exercise={exercise}
             name={name}

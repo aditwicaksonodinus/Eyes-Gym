@@ -45,6 +45,18 @@
     --calm-800: 176 70% 23%;
     --calm-900: 175 69% 19%;
 
+    /* Z-Index Layers (Centralized Stacking Context) */
+    --z-base: 0;
+    --z-content: 10;
+    --z-navbar: 40;
+    --z-footer: 40;
+    --z-toggle: 50;
+    --z-overlay: 50;
+    --z-backdrop: 55;
+    --z-sidebar: 60;
+    --z-fullscreen-page: 70;
+    --z-orientation: 80;
+
     --radius: 0.75rem;
   }
 

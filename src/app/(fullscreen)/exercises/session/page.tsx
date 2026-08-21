@@ -167,7 +167,7 @@ function RunningExercise({
 
       {/* ── Top Header Navbar ── */}
       {!focusMode && (
-        <header className="w-full border-b border-border bg-background px-4 py-3 flex items-center justify-between z-40 shrink-0">
+        <header className="w-full border-b border-border bg-background px-4 py-3 flex items-center justify-between z-navbar shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <Button
               variant="ghost"
@@ -225,7 +225,7 @@ function RunningExercise({
           onClick={() => setFocusMode(!focusMode)}
           aria-label={focusMode ? "Tampilkan semua kontrol" : "Fokus penuh (sembunyikan kontrol)"}
           className={cn(
-            "pointer-events-auto absolute z-50 flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-lg backdrop-blur transition-all duration-300 hover:bg-background bottom-4 right-4",
+            "pointer-events-auto absolute z-toggle flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-lg backdrop-blur transition-all duration-300 hover:bg-background bottom-4 right-4",
             focusMode ? "opacity-50 hover:opacity-100" : "opacity-80 hover:opacity-100"
           )}
         >
@@ -239,7 +239,7 @@ function RunningExercise({
 
       {/* ── Bottom Navbar (Footer) ── */}
       {!focusMode && (
-        <footer className="w-full border-t border-border bg-background p-4 z-40 shrink-0">
+        <footer className="w-full border-t border-border bg-background p-4 z-footer shrink-0">
           <div className="w-full flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 pointer-events-auto">
             {/* Section 1: Info */}
             <div className="flex flex-row md:flex-col items-center md:items-start justify-between md:justify-center gap-1 shrink-0">
@@ -310,31 +310,6 @@ function RunningExercise({
           </div>
         </footer>
       )}
-
-      {/* ── Focus Mode Toggle Button ── */}
-      <button
-        type="button"
-        onClick={() => setFocusMode(!focusMode)}
-        aria-label={focusMode ? "Tampilkan semua kontrol" : "Fokus penuh (sembunyikan kontrol)"}
-        className={cn(
-          "pointer-events-auto fixed z-50 flex h-10 items-center gap-1.5 rounded-full border border-border/80 bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-lg backdrop-blur transition-all duration-300 hover:bg-background",
-          focusMode
-            ? "bottom-4 right-4 opacity-50 hover:opacity-100"
-            : "bottom-[5.5rem] right-4 md:bottom-24 md:right-auto md:left-4"
-        )}
-      >
-        {focusMode ? (
-          <>
-            <Minimize2 className="h-3.5 w-3.5" />
-            Tampilkan Kontrol
-          </>
-        ) : (
-          <>
-            <Maximize2 className="h-3.5 w-3.5" />
-            Fokus Penuh
-          </>
-        )}
-      </button>
     </div>
   );
 }

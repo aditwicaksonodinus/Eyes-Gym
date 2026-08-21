@@ -28,7 +28,7 @@ export function Navbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-navbar w-full border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <nav
         className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 h-14"
         aria-label="Navigasi utama"
@@ -76,13 +76,13 @@ export function Navbar() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm md:hidden animate-in fade-in"
+            className="fixed inset-0 z-backdrop bg-black/60 backdrop-blur-sm md:hidden animate-in fade-in"
             onClick={() => setIsOpen(false)}
           />
           {/* Slide-out Sidebar container */}
           <div
             className={cn(
-              "fixed right-0 top-0 bottom-0 z-[60] w-72 bg-background border-l border-border p-6 shadow-2xl flex flex-col gap-6 transition-all duration-300 md:hidden animate-in slide-in-from-right"
+              "fixed right-0 top-0 bottom-0 z-sidebar w-72 bg-background border-l border-border p-6 shadow-2xl flex flex-col gap-6 transition-all duration-300 md:hidden animate-in slide-in-from-right"
             )}
           >
             {/* Sidebar Header inside drawer */}
