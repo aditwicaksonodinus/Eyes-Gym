@@ -1,61 +1,132 @@
-# Senam Mata
+# SeeFit
 
-Aplikasi web untuk meredakan kelelahan mata akibat layar (digital eye strain). Senam Mata menggabungkan tes mata mandiri (self-check) dan kumpulan latihan mata terpandu, semuanya berjalan di peramban tanpa perlu server.
+SeeFit adalah aplikasi web open-source untuk membantu mendeteksi gejala kelelahan mata (digital eye strain) dan memulihkannya melalui kumpulan latihan mata terpandu. Aplikasi ini berjalan sepenuhnya di sisi klien (client-side) tanpa memerlukan database atau server eksternal, menjamin privasi penuh bagi penggunanya.
 
-## Fitur
+---
 
-- **5 halaman utama**
-  - `/` — beranda: hero, CTA "Mulai Tes Mata" & "Mulai Senam Mata", section edukasi, carousel kartu latihan, footer dengan tautan GitHub.
-  - `/test` — tes mata mandiri (self-check): kartu Snellen berbasis Canvas/SVG yang dikalibrasi via `window.devicePixelRatio`, ditambah kuesioner singkat. Skrining saja, bukan diagnosis medis.
-  - `/exercises` — daftar latihan dalam grid kartu, dengan filter durasi dan kategori (relaksasi / fokus / gerakan).
-  - `/exercises/[slug]` — detail latihan: panduan animasi/ilustrasi, timer hitung mundur, instruksi langkah demi langkah, tombol "Selesai" & "Selanjutnya".
-  - `/exercises/session` — mode sesi penuh (playlist latihan berurutan, seperti guided workout).
-- **10 latihan** berdasarkan spesifikasi: 20-20-20, Palming, Kedip Cepat (Blinking), Near-Far Focus, Figure-8, Eye Rolling, Gerakan Atas-Bawah & Kiri-Kanan, Pencil Push-up, Zig-Zag, dan Diagonal Gaze.
-- **Tes mata self-check**: ketajaman visual sederhana (Snellen) + kuesioner kelelahan mata. Hasil berupa skrining dan rekomendasi ke latihan, bukan diagnosis medis.
-- **PWA yang dapat dipasang** (installable) via `@serwist/next`, lengkap dengan service worker.
-- **Pengingat 20-20-20**: notifikasi Web Notifications + getaran (vibration) di perangkat mobile.
+## Fitur Utama
 
-## Cara Menjalankan
+- **Kuesioner Gejala Awal**: Diagnosa mandiri awal untuk mendeteksi tingkat kelelahan otot mata sebelum memulai tes visual.
+- **Tes Ketajaman Mata Digital**: Skrining visus berbasis grafik Snellen (Optician-Sans) yang dikalibrasi presisi menggunakan objek fisik (seperti KTP/kartu ATM) dan kepadatan piksel layar (device pixel ratio) untuk pengujian jarak 2 meter.
+- **10 Latihan Mata Terpandu**: Sesi latihan terstruktur berdasarkan jenis gerakan (Aturan 20-20-20, Palming, Kedip Cepat, Fokus Dekat-Jauh, Gerakan Angka 8, Putar Mata, Atas-Bawah & Kiri-Kanan, Pencil Push-up, Zig-zag, dan Diagonal Gaze).
+- **Mode Sesi Penuh (Playlist)**: Mode latihan berurutan otomatis (playlist guided workout) untuk memandu latihan mata secara komprehensif.
+- **Progressive Web App (PWA)**: Aplikasi dapat diinstal langsung di perangkat desktop atau seluler melalui dukungan caching service worker untuk penggunaan luring (offline).
+- **Pengingat Berkala 20-20-20**: Notifikasi terjadwal menggunakan Web Notifications API untuk mengingatkan pengguna mengistirahatkan mata setiap 20 menit saat aplikasi berjalan di latar belakang.
 
+---
+
+## Tumpukan Teknologi (Tech Stack)
+
+Aplikasi SeeFit dibangun dengan menggunakan teknologi modern berikut:
+- **Kerangka Kerja**: Next.js 14+ (App Router, Static Site Generation)
+- **Bahasa Pemrograman**: TypeScript
+- **Styling & UI**: Tailwind CSS dan shadcn/ui
+- **Animasi**: Framer Motion
+- **Manajemen State**: Zustand
+- **PWA Integration**: Serwist (`@serwist/next`)
+
+Untuk penjelasan mendalam mengenai desain arsitektur, pemisahan lapisan logika murni, dan struktur penyimpanan data, silakan baca [ArsitekturSeeFit.md](./ArsitekturSeeFit.md).
+
+---
+
+## Persiapan Instalasi (Prerequisites)
+
+Sebelum menjalankan aplikasi secara lokal, pastikan Anda telah menginstal perangkat lunak berikut:
+- Node.js versi 20.19.0 atau yang lebih baru
+- npm (Node Package Manager)
+
+---
+
+## Cara Menjalankan Aplikasi
+
+Ikuti langkah-langkah di bawah ini untuk memasang dan menjalankan aplikasi SeeFit di komputer lokal Anda:
+
+### 1. Klon Repositori
+```bash
+git clone https://github.com/aditwicaksonodinus/Eyes-Gym.git
+cd Eyes-Gym
+```
+
+### 2. Instal Dependensi
 ```bash
 npm install
-npm run dev      # buka http://localhost:3000
+```
+
+### 3. Jalankan Server Pengembangan
+```bash
+npm run dev
+```
+Buka browser Anda dan akses halaman `http://localhost:3000`.
+
+### 4. Build untuk Produksi
+Untuk mengompilasi dan mengoptimalkan aplikasi untuk rilis produksi:
+```bash
 npm run build
 npm run start
 ```
 
-## Testing
+---
 
+## Pengujian (Testing)
+
+Proyek ini menggunakan Vitest untuk unit testing dan Playwright untuk pengujian end-to-end (E2E):
+
+### Menjalankan Unit Tests (Vitest)
 ```bash
-npx vitest run        # unit test
-npx playwright test   # E2E test
-npx tsc --noEmit      # cek tipe TypeScript
+npx vitest run
 ```
 
-## PENTING: Batasan Pengingat 20-20-20
+### Menjalankan Pengujian E2E (Playwright)
+```bash
+npx playwright test
+```
 
-Pengingat notifikasi 20-20-20 **hanya berjalan saat tab terbuka** (termasuk saat tab berada di latar belakang / background). Notifikasi tidak akan muncul ketika tab atau peramban ditutup sepenuhnya, karena aplikasi ini tidak memiliki push-server. Pastikan tab Senam Mata tetap terbuka agar pengingat aktif.
+### Memeriksa Validasi Tipe TypeScript
+```bash
+npx tsc --noEmit
+```
 
-## Catatan
+---
 
-- Sepenuhnya **client-side**. Tidak ada backend, tidak ada database, dan tidak ada Google Analytics.
-- Analytics privasi (Plausible/Umami) bersifat opsional dan **belum dihubungkan di v1**.
-- Tes mata hanya untuk skrining. Jika Anda mengalami keluhan mata berkelanjutan, **konsultasikan ke dokter mata (optalmologis)**. Aplikasi ini tidak menggantikan saran medis profesional.
+## Struktur Direktori Proyek
 
-## Pengembangan (Development)
+```
+.
+├── src/
+│   ├── app/                 # Halaman utama Next.js (App Router)
+│   │   ├── (main)/          # Rute dengan Navbar dan Footer (Home, Test)
+│   │   └── (fullscreen)/    # Rute fullscreen untuk sesi latihan
+│   ├── components/          # Komponen UI (shadcn, navbar, panggung gerakan)
+│   ├── lib/                 # Logika bisnis murni (Snellen, kalkulator visus)
+│   │   ├── gym/             # Logika latihan dan mesin state murni
+│   │   └── test/            # Logika pengujian ketajaman visual
+│   └── store/               # Zustand global store untuk riwayat tes
+├── public/                  # Aset statis (font, gambar, ikon PWA)
+├── e2e/                     # Skrip tes Playwright E2E
+├── tailwind.config.ts       # Konfigurasi Tailwind CSS
+└── vercel.json              # Konfigurasi deploy ke platform Vercel
+```
 
-`npm run dev` menjalankan `next dev --turbo` (Turbopack) melalui pembungkus tipis tanpa dependensi: `scripts/dev-logger.mjs`. Tujuannya agar **error/kompilasi Next.js cepat terlihat dan mudah dibaca** di terminal — tanpa menyembunyikan atau membuang satupun baris output.
+---
 
-- **Pembersihan port** ditangani oleh hook npm `predev` → `scripts/dev-kill.mjs` (referensi: konvensi `dev:kill` di Landing-CV), sehingga `npm run dev` selalu mematikan paksa proses lain yang menempati port dev (default `3000`) sebelum menjalankan server — jaminan **satu server** tunggal. Bisa dipanggil manual via `npm run dev:kill` (menerima argumen port, mis. `npm run dev:kill -- 3000 3001`).
-- `next dev` dijalankan dengan **Turbopack** (`--turbo`) untuk kompilasi dan logging yang lebih cepat. Lewati dengan argumen `--no-turbo`-equivalent jika diperlukan (mis. `npm run dev -- --turbopack` sudah dianggap aktif; untuk mematikan, sunting skrip atau jalankan `npx next dev`).
-- Setiap baris output `next dev` diteruskan apa adanya; hanya baris yang terdeteksi sebagai **error** (`✗ ERROR`) atau **warning** (`⚠ WARN`) yang diberi awalan berwarna agar menonjol di tengah noise.
-- Tidak ada filter, tidak ada baris yang dihapus — error tetap utuh dan tidak hilang.
-- Warna otomatis dimatikan saat tidak terhubung ke terminal asli (mis. log CI) agar tidak menghasilkan karakter acak.
-- `Ctrl+C` diteruskan ke **seluruh process group** Next.js (termasuk worker-nya) sehingga semua proses berhenti bersih tanpa meninggalkan proses yatim. Jika Next.js mengabaikan sinyal lunak, pembungkus akan memaksa `SIGKILL` setelah 4 detik. Kode keluar `next dev` dipertahankan.
-- `build` dan `start` tidak diubah dan tidak menggunakan pembungkus ini.
+## Kontribusi
 
-Untuk menjalankan Next.js dev secara langsung tanpa pembungkus (mis. debugging pembungkus itu sendiri), jalankan `npx next dev`.
+Kami sangat menyambut kontribusi dari komunitas untuk menyempurnakan aplikasi SeeFit. Jika Anda ingin berkontribusi:
+
+1. Buat branch fitur baru (`git checkout -b fitur/fitur-baru`).
+2. Tulis kode Anda dan pastikan seluruh pengujian berjalan dengan sukses (`npm run build` dan `npx vitest run`).
+3. Lakukan komit perubahan dengan pesan komit yang jelas.
+4. Push ke branch Anda (`git push origin fitur/fitur-baru`).
+5. Buka Pull Request di repositori ini.
+
+---
+
+## Informasi Penting Medis (Disclaimer)
+
+Tes mata mandiri di dalam aplikasi SeeFit hanya berfungsi sebagai alat skrining awal dan pencegahan kelelahan mata. Hasil tes bukan merupakan diagnosis medis formal. Jika Anda mengalami keluhan penglihatan yang memburuk atau berkelanjutan, segera konsultasikan ke dokter spesialis mata (oftalmologis) atau optometris profesional untuk pemeriksaan menyeluruh.
+
+---
 
 ## Lisensi
 
-Proyek ini dirilis di bawah lisensi **MIT**. Lihat berkas [`LICENSE`](./LICENSE).
+Proyek ini dilisensikan di bawah lisensi MIT. Informasi selengkapnya dapat ditemukan pada berkas [LICENSE](./LICENSE).
