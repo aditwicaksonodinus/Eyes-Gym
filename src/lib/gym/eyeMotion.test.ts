@@ -19,6 +19,7 @@ function makeExercise(slug: string, category: ExerciseCategory): Exercise {
     durationSec: 30,
     steps: [],
     descriptionId: `exercise.${slug}.description`,
+    description: `Test description for ${slug}`,
   };
 }
 

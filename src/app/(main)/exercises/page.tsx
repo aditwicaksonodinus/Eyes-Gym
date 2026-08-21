@@ -7,7 +7,6 @@ import {
   EXERCISES,
   getDurationBounds,
   type Exercise,
-  type ExerciseCategory,
 } from "@/lib/exercises";
 
 /** Indonesian display names (registry only stores i18n keys). */
@@ -27,11 +26,6 @@ function formatDuration(ex: Exercise): string {
   return `${min}–${max} detik`;
 }
 
-const CATEGORY_LABEL: Record<ExerciseCategory, string> = {
-  relaksasi: "Relaksasi",
-  fokus: "Fokus",
-  gerakan: "Gerakan",
-};
 
 export default function ExercisesPage() {
   return (
@@ -53,7 +47,7 @@ export default function ExercisesPage() {
             name={NAME_BY_SLUG[ex.slug] ?? ex.slug}
             category={ex.category}
             duration={formatDuration(ex)}
-            description={`Kategori ${CATEGORY_LABEL[ex.category]}.`}
+            description={ex.description}
           />
         ))}
       </div>

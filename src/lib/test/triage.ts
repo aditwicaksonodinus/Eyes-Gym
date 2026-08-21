@@ -1,21 +1,11 @@
 /**
- * Triage logic for the eye self-check — PURE functions, no React.
+ * Triage & Refractive Indication Classifier — PURE functions, no React.
  *
- * Two entry points:
- *   • `triageAcuity({ leftLogMAR, rightLogMAR })` — wraps the per-eye acuity
- *     bands (via `bandForLogMAR` from ./acuity) and derives best/worst/asymmetry.
- *   • `triage({ acuity, symptomScore })` — combines acuity + symptom score into
- *     one of three branches: normal / borderline / referral.
- *
- * Branch precedence (most serious wins):
- *   1. referral   — worst eye logMAR > 0.5  OR  inter-eye asymmetry ≥ 0.2
- *   2. normal     — best eye logMAR ≤ 0.1 (both eyes) AND symptomScore ≤ 2
- *   3. borderline — everything else (e.g. worst eye 0.2–0.4, or symptomScore ≥ 3)
- *
- * A referral NEVER returns an exercise CTA. Every result carries the
- * self-check disclaimer (this is screening, not a medical diagnosis).
+ * Combines acuity test results + symptom questionnaire answers to derive:
+ *   • Triage recommendation (normal / borderline / referral).
+ *   • Refractive indication (emmetropia / myopia / presbyopia / astigmatism).
  */
-import { bandForLogMAR } from "@/lib/test/acuity";
+import { bandForLogMAR, toSnellenFraction, toSnellenSix } from "@/lib/test/acuity";
 
 export interface TriageAcuityInput {
   leftLogMAR: number;
@@ -55,12 +45,97 @@ export function triageAcuity({
   };
 }
 
+export type RefractionCategory =
+  | "emmetropia"
+  | "myopia"
+  | "presbyopia"
+  | "astigmatism";
+
+export interface RefractiveIndication {
+  type: RefractionCategory;
+  label: string;
+  badgeVariant: "default" | "secondary" | "destructive" | "outline";
+  severity?: "Ringan" | "Sedang / Perlu Evaluasi";
+  explanation: string;
+  recommendation: string;
+}
+
+export interface RefractionInput {
+  leftLogMAR: number;
+  rightLogMAR: number;
+  ageScore?: number; // 0 (<40) or 2 (>=40)
+  nearDifficultyScore?: number; // 0, 1, 2
+}
+
+/**
+ * Classify potential refractive error orientation.
+ */
+export function classifyRefraction(input: RefractionInput): RefractiveIndication {
+  const { leftLogMAR, rightLogMAR, ageScore = 0, nearDifficultyScore = 0 } = input;
+  const worst = Math.max(leftLogMAR, rightLogMAR);
+  const asymmetry = Math.abs(leftLogMAR - rightLogMAR);
+
+  // 1. Astigmatism / Significant Asymmetry
+  if (asymmetry >= 0.2) {
+    return {
+      type: "astigmatism",
+      label: "Indikasi Astigmatisme / Asimetris",
+      badgeVariant: "secondary",
+      explanation:
+        "Terdapat perbedaan fokus penglihatan yang signifikan antara mata kiri dan mata kanan Anda.",
+      recommendation:
+        "Disarankan melakukan pemeriksaan refraksi silindris lengkap dengan dokter mata atau optometris.",
+    };
+  }
+
+  // 2. Myopia (Mata Minus) - distance acuity at 2m is reduced (> 0.1 logMAR)
+  if (worst > 0.1) {
+    const isModerate = worst > 0.3;
+    return {
+      type: "myopia",
+      label: "Kecenderungan Miopia (Mata Minus)",
+      badgeVariant: isModerate ? "destructive" : "secondary",
+      severity: isModerate ? "Sedang / Perlu Evaluasi" : "Ringan",
+      explanation: `Ketajaman penglihatan jarak jauh 2 meter Anda mengalami penurunan (${toSnellenSix(worst)} / ${toSnellenFraction(worst)}).`,
+      recommendation:
+        "Kondisi ini umumnya memerlukan koreksi kacamata minus (lensa sferis negatif). Kunjungi optik atau dokter mata untuk uji lensa subjektif.",
+    };
+  }
+
+  // 3. Presbyopia (Mata Plus / Tua) - distance acuity is 6/6, but near difficulty or age >= 40
+  if (nearDifficultyScore >= 1 || (ageScore >= 2 && nearDifficultyScore >= 0)) {
+    return {
+      type: "presbyopia",
+      label: "Kecenderungan Presbiopia (Mata Plus / Tua)",
+      badgeVariant: "outline",
+      severity: nearDifficultyScore >= 2 ? "Sedang / Perlu Evaluasi" : "Ringan",
+      explanation:
+        "Penglihatan jarak jauh 2 meter Anda tergolong tajam (6/6), namun terdapat indikasi penurunan daya akomodasi membaca tulisan kecil jarak dekat (30 cm).",
+      recommendation:
+        "Disarankan menggunakan kacamata baca plus (lensa sferis positif) saat membaca atau beraktivitas jarak dekat.",
+    };
+  }
+
+  // 4. Emmetropia (Penglihatan Normal)
+  return {
+    type: "emmetropia",
+    label: "Penglihatan Normal (Emertopia)",
+    badgeVariant: "default",
+    explanation:
+      "Ketajaman penglihatan jarak jauh 2 meter dan kenyamanan baca jarak dekat Anda berada dalam batas optimal.",
+    recommendation:
+      "Pertahankan kebiasaan sehat menatap layar dengan aturan 20-20-20 dan pencahayaan ruangan yang cukup.",
+  };
+}
+
 export type TriageBranch = "normal" | "borderline" | "referral";
 export type TriageCta = "prevention" | "exercise" | null;
 
 export interface TriageInput {
   acuity: TriageAcuityResult;
   symptomScore: number;
+  ageScore?: number;
+  nearDifficultyScore?: number;
 }
 
 export interface TriageResult {
@@ -69,6 +144,7 @@ export interface TriageResult {
   ctaLabel?: string;
   message: string;
   disclaimer: string;
+  refractiveIndication: RefractiveIndication;
 }
 
 const DISCLAIMER = "Ini pemeriksaan mandiri, bukan diagnosis medis.";
@@ -81,31 +157,42 @@ const REFERRAL_ASYMMETRY = 0.2;
 const NORMAL_BEST_LOGMAR = 0.1;
 
 /**
- * Combine acuity + symptom score into a triage branch.
- *
- * @param acuity       Result of `triageAcuity(...)`.
- * @param symptomScore Summed 0–2 answers from the questionnaire (0–12).
+ * Combine acuity + symptom score into a triage branch and refractive indication.
  */
-export function triage({ acuity, symptomScore }: TriageInput): TriageResult {
+export function triage({
+  acuity,
+  symptomScore,
+  ageScore = 0,
+  nearDifficultyScore = 0,
+}: TriageInput): TriageResult {
+  const refractiveIndication = classifyRefraction({
+    leftLogMAR: acuity.left.logMAR,
+    rightLogMAR: acuity.right.logMAR,
+    ageScore,
+    nearDifficultyScore,
+  });
+
   // 1. Hard referral — most serious, overrides everything.
   if (acuity.worst > REFERRAL_WORST_LOGMAR || acuity.asymmetry >= REFERRAL_ASYMMETRY) {
     return {
       branch: "referral",
       cta: null,
-      message: "Segera periksa ke dokter mata.",
+      message: "Segera periksa ke dokter mata untuk pemeriksaan refraksi & kesehatan retina menyeluruh.",
       disclaimer: DISCLAIMER,
+      refractiveIndication,
     };
   }
 
   // 2. Normal — both eyes healthy AND few symptoms.
-  if (acuity.best <= NORMAL_BEST_LOGMAR && symptomScore <= 2) {
+  if (acuity.best <= NORMAL_BEST_LOGMAR && symptomScore <= 3) {
     return {
       branch: "normal",
       cta: "prevention",
       ctaLabel: "Tips Pencegahan",
       message:
-        "Mata Anda terlihat baik. Pertahankan kebiasaan sehat: istirahat 20-20-20 dan jaga jarak pandang dari layar.",
+        "Mata Anda dalam kondisi baik. Pertahankan kebiasaan sehat: istirahat 20-20-20 dan jaga jarak pandang dari layar.",
       disclaimer: DISCLAIMER,
+      refractiveIndication,
     };
   }
 
@@ -114,7 +201,8 @@ export function triage({ acuity, symptomScore }: TriageInput): TriageResult {
     branch: "borderline",
     cta: "exercise",
     ctaLabel: "Mulai Latihan",
-    message: "Mata lelah — coba latihan SeeFit 2 minggu, lalu tes ulang.",
+    message: "Mata lelah — coba latihan senam mata Eyes-Gym 2 minggu, lalu tes ulang.",
     disclaimer: DISCLAIMER,
+    refractiveIndication,
   };
 }

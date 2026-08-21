@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import EyeStage from "@/components/EyeStage";
+import { NavbarShell } from "@/components/navbar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -368,30 +369,8 @@ function TopHeader({
   name: string;
   category: ExerciseCategory;
 }) {
-  const [isFullscreen, setIsFullscreen] = React.useState(false);
-
-  React.useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-    };
-  }, []);
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch((err) => {
-        console.error(err);
-      });
-    } else {
-      document.exitFullscreen();
-    }
-  };
-
   return (
-    <header className="w-full border-b border-border bg-background px-4 py-3 flex items-center justify-between z-navbar shrink-0">
+    <NavbarShell className="shrink-0">
       <div className="flex items-center gap-3 min-w-0">
         <Button asChild variant="ghost" size="sm" className="-ml-1 gap-1.5 text-muted-foreground">
           <Link href="/exercises" aria-label="Kembali ke daftar latihan">
@@ -413,22 +392,9 @@ function TopHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
-          onClick={toggleFullscreen}
-          aria-label={isFullscreen ? "Keluar layar penuh" : "Masuk layar penuh"}
-        >
-          {isFullscreen ? (
-            <Minimize2 className="h-4 w-4" aria-hidden />
-          ) : (
-            <Maximize2 className="h-4 w-4" aria-hidden />
-          )}
-        </Button>
         <ThemeToggle />
       </div>
-    </header>
+    </NavbarShell>
   );
 }
 

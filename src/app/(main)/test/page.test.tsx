@@ -26,20 +26,21 @@ describe("TestPage (/test wizard)", () => {
     await user.click(screen.getByRole("button", { name: "Mulai Tes" }));
 
     // Step 1: instructions page is shown. Start button is now present.
-    const startNowButton = screen.getByRole("button", { name: "Mulai Sekarang" });
+    const startNowButton = screen.getByRole("button", { name: /Mulai Tes 2 Meter/i });
     expect(startNowButton).toBeInTheDocument();
 
     await user.click(startNowButton);
 
-    // Step 2: acuity test buttons and letter now visible.
+    // Step 2: acuity test 4-choice buttons, unreadable button, and letter image are visible.
     expect(
-      await screen.findByRole("button", { name: "Terbaca" }),
+      await screen.findByRole("img", { name: /Huruf uji/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Tidak Terbaca" }),
+      screen.getByRole("button", { name: /Huruf Tidak Terlihat/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", { name: /Huruf uji/i }),
-    ).toBeInTheDocument();
+
+    const buttons = screen.getAllByRole("button");
+    // 4 letter option buttons + 1 unreadable button + nav buttons
+    expect(buttons.length).toBeGreaterThanOrEqual(5);
   });
 });

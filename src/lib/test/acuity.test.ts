@@ -7,178 +7,88 @@ import {
   bandForLogMAR,
 } from "./acuity";
 
-/**
- * Hand-computed reference for the scripted mixed sequence below.
- *
- * Convention (documented in acuity.ts): a reversal is recorded at the logMAR
- * value AFTER the step that flipped the response direction. The final estimate
- * averages the reversal points AFTER the first reversal; with <=1 reversal the
- * final clamped logMAR is reported instead.
- *
- * Sequence C,C,I,C,I,I,C,I (start 0.0, step 0.1, clamp [-0.3, 1.0]):
- *   1 C -> -0.1
- *   2 C -> -0.2
- *   3 I -> -0.1  (rev 1 @ -0.1)
- *   4 C -> -0.2  (rev 2 @ -0.2)
- *   5 I -> -0.1  (rev 3 @ -0.1)
- *   6 I ->  0.0
- *   7 C -> -0.1  (rev 4 @ -0.1)
- *   8 I ->  0.0  (rev 5 @  0.0)
- * reversalLogMARs = [-0.1, -0.2, -0.1, -0.1, 0.0]
- * after first = [-0.2, -0.1, -0.1, 0.0] -> avg = -0.1
- * 10^-0.1 = 0.79433 -> 20*0.79433 = 15.89 -> "20/16"; 6*0.79433 = 4.77 -> "6/5"
- * decimal = 10^0.1 = 1.25893
- */
-describe("createAcuityTest — perfect (all correct)", () => {
-  it("reports band Normal and best Snellen (20/10) when every answer is correct", () => {
-    const t = createAcuityTest();
-    for (let i = 0; i < 8; i++) t.answer(true);
+describe("createAcuityTest — ETDRS Line-by-Line 5-Letter Protocol", () => {
+  it("perfect run (all 5 correct per line down to -0.3)", () => {
+    const t = createAcuityTest({ startLogMAR: 1.0 });
+    // 14 lines from 1.0 down to -0.3 (1.0, 0.9, ..., -0.3)
+    while (!t.getState().done) {
+      t.answer(true);
+    }
     const r = t.result();
     expect(r.band).toBe("Normal");
     expect(r.snellenFraction).toBe("20/10");
-    expect(r.logMAR).toBeLessThanOrEqual(0.1);
+    expect(r.snellenSix).toBe("6/3");
+    expect(r.logMAR).toBe(-0.3);
   });
-});
 
-describe("createAcuityTest — all incorrect", () => {
-  it("reports band 'Perlu pemeriksaan' and Snellen worse than 20/60", () => {
-    const t = createAcuityTest();
-    for (let i = 0; i < 8; i++) t.answer(false);
+  it("early-exits on 3 incorrect/unreadable answers on a line (cannot pass)", () => {
+    const t = createAcuityTest({ startLogMAR: 1.0 });
+    t.answer(false);
+    t.answer(false);
+    t.answer(false);
+    // 3 incorrect answers out of 5 -> max possible correct = 2 < 3 -> done = true immediately!
+    expect(t.getState().done).toBe(true);
+    expect(t.getState().answers.length).toBe(3);
+  });
+
+  it("all incorrect on first line (logMAR 1.0)", () => {
+    const t = createAcuityTest({ startLogMAR: 1.0 });
+    for (let i = 0; i < 5; i++) {
+      t.answer(false);
+    }
+    const state = t.getState();
+    expect(state.done).toBe(true);
     const r = t.result();
     expect(r.band).toBe("Perlu pemeriksaan");
-    const denom = Number(r.snellenFraction.split("/")[1]);
-    expect(denom).toBeGreaterThan(60);
-    expect(r.snellenFraction).toBe("20/126");
-  });
-});
-
-describe("createAcuityTest — scripted mixed sequence", () => {
-  it("matches hand-computed Snellen/decimal/band for C,C,I,C,I,I,C,I", () => {
-    const t = createAcuityTest();
-    const seq = [true, true, false, true, false, false, true, false];
-    for (const c of seq) t.answer(c);
-    const r = t.result();
-    expect(r.logMAR).toBeCloseTo(-0.1, 6);
-    expect(r.snellenFraction).toBe("20/16");
-    expect(r.snellenSix).toBe("6/5");
-    expect(r.decimal).toBeCloseTo(1.2589, 4);
-    expect(r.band).toBe("Normal");
-    expect(t.getState().reversals).toBe(5);
-  });
-});
-
-describe("createAcuityTest — band boundaries", () => {
-  it("logMAR 0.1 -> Normal", () => {
-    const t = createAcuityTest();
-    t.answer(false); // 0.0 -> 0.1, no reversal -> final clamped 0.1
-    expect(t.result().band).toBe("Normal");
+    expect(r.snellenFraction).toBe("20/200");
+    expect(r.snellenSix).toBe("6/60");
+    expect(r.logMAR).toBe(1.0);
   });
 
-  it("logMAR 0.2 -> Ringan", () => {
-    const t = createAcuityTest();
+  it("passes line 1.0 (5/5) and gets 2 correct on line 0.9 (letter credit bonus)", () => {
+    const t = createAcuityTest({ startLogMAR: 1.0 });
+    // Line 1.0: 5 correct -> passes line 1.0
+    for (let i = 0; i < 5; i++) t.answer(true);
+    expect(t.getState().logMAR).toBe(0.9);
+
+    // Line 0.9: 2 correct, 3 incorrect -> fails line 0.9
+    t.answer(true);
+    t.answer(true);
     t.answer(false);
-    t.answer(false); // 0.2
-    expect(t.result().band).toBe("Ringan");
-  });
+    t.answer(false);
+    t.answer(false);
 
-  it("logMAR 0.5 -> Perlu pemeriksaan", () => {
-    const t = createAcuityTest();
-    for (let i = 0; i < 5; i++) t.answer(false); // 0.5
-    expect(t.result().band).toBe("Perlu pemeriksaan");
+    expect(t.getState().done).toBe(true);
+    const r = t.result();
+    // Base = 1.0 passed line, credit = 2 * 0.02 = 0.04 -> estLogMAR = 0.96
+    expect(r.logMAR).toBeCloseTo(0.96, 2);
+    expect(r.band).toBe("Perlu pemeriksaan");
   });
 });
 
-describe("createAcuityTest — state + stop rule", () => {
-  it("getState exposes logMAR, done, reversals, answers", () => {
-    const t = createAcuityTest();
+describe("createAcuityTest — state & stop rules", () => {
+  it("getState exposes logMAR, letterInLine, lineCorrectCount, done, answers", () => {
+    const t = createAcuityTest({ startLogMAR: 1.0 });
     t.answer(true);
     const s = t.getState();
-    expect(s).toHaveProperty("logMAR");
-    expect(s).toHaveProperty("done");
-    expect(s).toHaveProperty("reversals");
-    expect(Array.isArray(s.answers)).toBe(true);
+    expect(s.logMAR).toBe(1.0);
+    expect(s.letterInLine).toBe(2);
+    expect(s.lineCorrectCount).toBe(1);
+    expect(s.done).toBe(false);
     expect(s.answers).toEqual([true]);
   });
 
-  it("stops when answers length reaches exactly 8", () => {
-    const t = createAcuityTest();
-    for (let i = 0; i < 8; i++) t.answer(false);
-    expect(t.getState().done).toBe(true);
-    expect(t.getState().logMAR).toBeCloseTo(0.8, 6);
-  });
-
-  it("ignores answers after done", () => {
-    const t = createAcuityTest();
-    for (let i = 0; i < 8; i++) t.answer(false);
-    const before = t.getState().answers.length;
-    t.answer(true);
-    expect(t.getState().answers.length).toBe(before);
-  });
-});
-
-describe("createAcuityTest — robustness / edge cases", () => {
-  it("all-correct run terminates and reports a finite, non-NaN result", () => {
-    const t = createAcuityTest();
-    for (let i = 0; i < 8; i++) t.answer(true);
-    const r = t.result();
-    expect(Number.isFinite(r.logMAR)).toBe(true);
-    expect(Number.isNaN(r.logMAR)).toBe(false);
-    expect(r.snellenFraction).toMatch(/^20\/\d+$/);
-    expect(r.snellenSix).toMatch(/^6\/\d+$/);
-    expect(Number.isFinite(r.decimal)).toBe(true);
-  });
-
-  it("all-incorrect run terminates and reports a finite, non-NaN result", () => {
-    const t = createAcuityTest();
-    for (let i = 0; i < 8; i++) t.answer(false);
-    const r = t.result();
-    expect(Number.isFinite(r.logMAR)).toBe(true);
-    expect(r.snellenFraction).toBe("20/126");
-    expect(r.band).toBe("Perlu pemeriksaan");
-  });
-
-  it("is deterministic: identical input sequences yield identical results", () => {
-    const seq = [true, false, true, true, false, false, true, false, true];
-    const run = () => {
-      const t = createAcuityTest();
-      for (const c of seq) t.answer(c);
-      return t.result();
-    };
-    const a = run();
-    const b = run();
-    expect(a.logMAR).toBe(b.logMAR);
-    expect(a.snellenFraction).toBe(b.snellenFraction);
-    expect(a.decimal).toBe(b.decimal);
-    expect(a.band).toBe(b.band);
-  });
-
-  it("boundary logMAR -0.3 (best) → 20/10, Normal", () => {
-    const t = createAcuityTest();
-    for (let i = 0; i < 4; i++) t.answer(true); // pins at -0.3
-    const r = t.result();
-    expect(r.logMAR).toBe(-0.3);
-    expect(r.snellenFraction).toBe("20/10");
-    expect(r.band).toBe("Normal");
-  });
-
-  it("boundary logMAR 1.0 (worst) → 20/200, Perlu pemeriksaan", () => {
+  it("ignores answers once test is done", () => {
     const t = createAcuityTest({ startLogMAR: 1.0 });
-    for (let i = 0; i < 8; i++) t.answer(false); // pins at 1.0
-    const r = t.result();
-    expect(r.logMAR).toBe(1.0);
-    expect(r.snellenFraction).toBe("20/200");
-    expect(r.band).toBe("Perlu pemeriksaan");
-  });
-
-  it("boundary logMAR 0.1 → Normal (inclusive upper bound)", () => {
-    const t = createAcuityTest();
-    t.answer(false); // 0.0 -> 0.1, no reversal -> final clamped 0.1
-    expect(t.result().band).toBe("Normal");
-    expect(t.result().logMAR).toBe(0.1);
+    for (let i = 0; i < 5; i++) t.answer(false); // fails line 1.0
+    expect(t.getState().done).toBe(true);
+    const lenBefore = t.getState().answers.length;
+    t.answer(true);
+    expect(t.getState().answers.length).toBe(lenBefore);
   });
 });
 
-describe("acuity conversion helpers — never NaN/undefined", () => {
+describe("acuity conversion helpers — defensive boundaries", () => {
   it("toSnellenFraction guards non-finite input", () => {
     expect(toSnellenFraction(NaN)).toBe("20/20");
     expect(toSnellenFraction(Infinity)).toBe("20/20");

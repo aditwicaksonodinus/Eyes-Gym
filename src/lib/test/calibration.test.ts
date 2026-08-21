@@ -1,6 +1,8 @@
 /// <reference types="vitest/globals" />
 import {
   computeLetterPx,
+  computePhysicalLetterMm,
+  computeLetterPxPhysical,
   cmToMm,
   creditCardPxToMm,
   physicalPpiToPxPerMm,
@@ -112,5 +114,23 @@ describe("screenPhysicalPpi", () => {
     expect(screenPhysicalPpi(1)).toBeNull();
     expect(screenPhysicalPpi(2)).toBeNull();
     expect(screenPhysicalPpi(3)).toBeNull();
+  });
+});
+
+describe("computePhysicalLetterMm & computeLetterPxPhysical", () => {
+  it("computes 2.9088 mm for 20/20 letter at 2 meters (2000mm)", () => {
+    const mm = computePhysicalLetterMm(2000, 0.0);
+    expect(mm).toBeCloseTo(2.9088, 3);
+  });
+
+  it("computes 29.088 mm for 20/200 letter at 2 meters (2000mm)", () => {
+    const mm = computePhysicalLetterMm(2000, 1.0);
+    expect(mm).toBeCloseTo(29.0888, 2);
+  });
+
+  it("converts physical mm to pixels given screen density (e.g. ~92 PPI ≈ 3.622 px/mm)", () => {
+    const pxPerMm = 92 / 25.4;
+    const px = computeLetterPxPhysical(2000, pxPerMm, 0.0);
+    expect(px).toBeCloseTo(10.53, 1);
   });
 });

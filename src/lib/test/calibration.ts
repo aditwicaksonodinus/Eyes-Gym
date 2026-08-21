@@ -130,3 +130,35 @@ export function letterPxFrom(
 export function screenPhysicalPpi(_dpr: number): number | null {
   return null;
 }
+
+/**
+ * Compute the exact physical height (in millimeters) of a Snellen optotype
+ * for a given test distance (mm) and logMAR visual acuity.
+ * Uses exact 5-arcminute visual angle trigonometry:
+ *   physicalMm = 2 · distanceMm · tan(2.5′) · 10^logMAR
+ */
+export function computePhysicalLetterMm(
+  distanceMm: number,
+  logMAR: number,
+): number {
+  const halfAngleRad = HALF_ANGLE_ARCMIN * ARCMIN_RAD;
+  return 2 * distanceMm * Math.tan(halfAngleRad) * 10 ** logMAR;
+}
+
+/**
+ * Compute the exact device pixel height for a 1:1 true physical visual angle.
+ *   letterPx = physicalLetterMm · pxPerMm
+ */
+export function computeLetterPxPhysical(
+  distanceMm: number,
+  pxPerMm: number,
+  logMAR: number,
+  opts: { minPx?: number; maxPx?: number } = {},
+): number {
+  const physicalMm = computePhysicalLetterMm(distanceMm, logMAR);
+  const rawPx = physicalMm * pxPerMm;
+  const minPx = opts.minPx ?? 4;
+  const maxPx = opts.maxPx ?? 600;
+  return Math.min(maxPx, Math.max(minPx, rawPx));
+}
+

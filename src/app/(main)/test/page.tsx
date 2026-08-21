@@ -7,8 +7,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   RotateCcw,
-  Maximize2,
-  Minimize2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -23,24 +21,28 @@ import {
 import { useAppStore } from "@/store/appStore";
 import {
   createAcuityTest,
+  toSnellenSix,
+  toSnellenFraction,
   type AcuityResult,
 } from "@/lib/test/acuity";
 import {
   CREDIT_CARD_WIDTH_MM,
   cmToMm,
-  computeLetterPx,
+  computeLetterPxPhysical,
+  computePhysicalLetterMm,
 } from "@/lib/test/calibration";
 import { triageAcuity, triage } from "@/lib/test/triage";
 import { QUESTIONS } from "@/lib/test/questions";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { NavbarShell } from "@/components/navbar";
 
-/** Sloan optotype set (12.5% legibility-balanced). */
-const SLOAN = ["C", "D", "H", "K", "N", "O", "R", "S", "V", "Z"] as const;
+/** 9 standard Snellen block optotypes (5x5 grid geometry). */
+const SNELLEN = ["C", "D", "E", "F", "L", "O", "P", "T", "Z"] as const;
 
-/** Fallback calibration if the user somehow reaches the test without it. */
-const FALLBACK_PX_PER_MM = 96 / 25.4; // ~1 CSS px per 0.2646 mm
-const FALLBACK_DISTANCE_MM = 400; // 40 cm
+/** Fallback calibration for ~92 PPI desktop display at fixed 2-meter test distance. */
+const FALLBACK_PX_PER_MM = 92 / 25.4; // ~3.622 px per mm
+const DESKTOP_TEST_DISTANCE_MM = 2000; // Fixed 2 meters (2000 mm)
 
 type EyeSide = "left" | "right";
 const EYE_ORDER: EyeSide[] = ["left", "right"];
@@ -51,68 +53,52 @@ const EYE_LABEL: Record<EyeSide, string> = {
 
 const SYMPTOM_LABELS = ["Tidak pernah", "Kadang-kadang", "Sering"] as const;
 
+/** Helper to generate 4 multiple-choice optotype options (1 target + 3 distractors). */
+function generateOptions(target: string): string[] {
+  const distractors = SNELLEN.filter((char) => char !== target);
+  const shuffledDistractors = [...distractors].sort(() => Math.random() - 0.5);
+  const selectedDistractors = shuffledDistractors.slice(0, 3);
+  const opts = [target, ...selectedDistractors];
+  return opts.sort(() => Math.random() - 0.5);
+}
+
 export default function TestPage() {
   const reduceMotion = useReducedMotion();
 
   // ── Wizard navigation ──────────────────────────────────────────────────────
   const [step, setStep] = React.useState(0);
 
-  // ── Step 1: calibration ────────────────────────────────────────────────────
-  const [cardPx, setCardPx] = React.useState(200);
-  const [distanceCm, setDistanceCm] = React.useState(40);
+  // ── Step 1: Calibration (fixed 2 meters distance, card calibration) ───────
+  const [cardPx, setCardPx] = React.useState(310);
+  const distanceCm = 200; // Lock distance to 2 meters (200 cm)
 
   const pxPerMm = cardPx / CREDIT_CARD_WIDTH_MM;
   const distanceMm = cmToMm(distanceCm);
   const effPxPerMm = pxPerMm || FALLBACK_PX_PER_MM;
-  const effDistanceMm = distanceMm || FALLBACK_DISTANCE_MM;
+  const effDistanceMm = distanceMm || DESKTOP_TEST_DISTANCE_MM;
 
   // ── Right eye transition confirmation ──────────────────────────────────────
   const [showRightEyeTransition, setShowRightEyeTransition] = React.useState(false);
-
-  // ── Browser fullscreen toggle state ──────────────────────────────────────
-  const [isFullscreen, setIsFullscreen] = React.useState(false);
-
-  React.useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-    };
-  }, []);
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch((err) => {
-        console.error(err);
-      });
-    } else {
-      document.exitFullscreen();
-    }
-  };
-
-  // ── Step 2: acuity engine (per eye) ────────────────────────────────────────
   const engineRef = React.useRef<ReturnType<typeof createAcuityTest> | null>(
     null,
   );
-  // Synchronous mirror of the active eye. Updated in lockstep with `engineRef`
-  // so eye attribution can never race a re-render.
   const sideRef = React.useRef<EyeSide>("left");
   const [currentSide, setCurrentSide] = React.useState<EyeSide>("left");
-  // Mirrors engineRef so the acuity card re-renders once the engine exists.
   const [engineReady, setEngineReady] = React.useState(false);
-  const [letterChar, setLetterChar] = React.useState<string>(SLOAN[0]);
+  const [letterChar, setLetterChar] = React.useState<string>(SNELLEN[0]);
+  const [options, setOptions] = React.useState<string[]>([]);
   const [leftLogMAR, setLeftLogMAR] = React.useState<number | null>(null);
   const [rightLogMAR, setRightLogMAR] = React.useState<number | null>(null);
-  const [leftSnellen, setLeftSnellen] = React.useState<string>("");
-  const [rightSnellen, setRightSnellen] = React.useState<string>("");
+  const [leftResult, setLeftResult] = React.useState<AcuityResult | null>(null);
+  const [rightResult, setRightResult] = React.useState<AcuityResult | null>(null);
 
   const startEye = React.useCallback((side: EyeSide) => {
     engineRef.current = createAcuityTest({ startLogMAR: 1.0 });
     sideRef.current = side;
     setCurrentSide(side);
-    setLetterChar(SLOAN[Math.floor(Math.random() * SLOAN.length)]);
+    const firstTarget = SNELLEN[Math.floor(Math.random() * SNELLEN.length)];
+    setLetterChar(firstTarget);
+    setOptions(generateOptions(firstTarget));
     setEngineReady(true);
   }, []);
 
@@ -123,32 +109,36 @@ export default function TestPage() {
     }
   }, [step, startEye]);
 
-  const handleAnswer = React.useCallback(
-    (correct: boolean) => {
+  const handleSelectOption = React.useCallback(
+    (chosenChar: string) => {
       const engine = engineRef.current;
       if (!engine) return;
-      const state = engine.answer(correct);
+
+      const isCorrect = chosenChar === letterChar;
+      const state = engine.answer(isCorrect);
       if (state.done) {
         const res: AcuityResult = engine.result();
         const side = sideRef.current;
         useAppStore.getState().setEyeResult(side, "phone", {
-          snellen: res.snellenFraction,
+          snellen: `${res.snellenSix} (${res.snellenFraction})`,
           distance: effDistanceMm / 1000,
         });
         if (side === "left") {
           setLeftLogMAR(res.logMAR);
-          setLeftSnellen(res.snellenFraction);
+          setLeftResult(res);
           setShowRightEyeTransition(true);
         } else {
           setRightLogMAR(res.logMAR);
-          setRightSnellen(res.snellenFraction);
+          setRightResult(res);
           setStep(3);
         }
       } else {
-        setLetterChar(SLOAN[Math.floor(Math.random() * SLOAN.length)]);
+        const nextTarget = SNELLEN[Math.floor(Math.random() * SNELLEN.length)];
+        setLetterChar(nextTarget);
+        setOptions(generateOptions(nextTarget));
       }
     },
-    [effDistanceMm],
+    [effDistanceMm, letterChar],
   );
 
   // ── Step 3: symptom questionnaire ──────────────────────────────────────────
@@ -193,11 +183,10 @@ export default function TestPage() {
     recordedRef.current = false;
     setLeftLogMAR(null);
     setRightLogMAR(null);
-    setLeftSnellen("");
-    setRightSnellen("");
+    setLeftResult(null);
+    setRightResult(null);
     setAnswers({});
-    setCardPx(200);
-    setDistanceCm(40);
+    setCardPx(310);
     setShowRightEyeTransition(false);
     useAppStore.getState().resetEyeResults();
     setStep(0);
@@ -214,63 +203,42 @@ export default function TestPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      {/* Step 2: Fullscreen Acuity Test (Mirroring Gym style) */}
+      {/* Step 2: Fullscreen Acuity Test (1-to-1 layout mirroring Gym style) */}
       {step === 2 && engineReady && (
-        <div className="fixed inset-0 z-fullscreen-page bg-background flex flex-col">
+        <div className="fixed inset-0 z-fullscreen-page bg-background flex flex-col overflow-hidden">
           {/* Background Stage */}
-          <div className="fixed inset-0 bg-secondary/40 dark:bg-secondary/20 z-0 pointer-events-none" />
+          <div className="absolute inset-0 bg-secondary/40 dark:bg-secondary/20 z-0 pointer-events-none" />
 
-          {/* Top Header Overlay */}
-          <motion.div
-            initial={{ y: -60, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ type: "spring", damping: 28, stiffness: 280 }}
-            className="fixed inset-x-0 top-0 z-fullscreen-page"
-            style={{ paddingTop: "env(safe-area-inset-top)" }}
-          >
-            <div className="mx-3 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-background/80 px-4 py-2.5 shadow-lg shadow-black/5 backdrop-blur-xl dark:bg-background/70">
-              <div className="flex items-center gap-3 min-w-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="-ml-1 gap-1.5 text-muted-foreground"
-                  onClick={() => {
-                    engineRef.current = null;
-                    setEngineReady(false);
-                    setStep(1);
-                  }}
-                >
-                  <ArrowLeft className="h-4 w-4" aria-hidden />
-                  <span className="hidden sm:inline">Kembali</span>
-                </Button>
-                <div className="h-4 w-px bg-border" aria-hidden />
-                <div className="flex min-w-0 items-center gap-2">
-                  <h1 className="truncate text-sm font-semibold text-foreground sm:text-base">
-                    Tes Ketajaman Mata
-                  </h1>
-                  <Badge variant="secondary" className="shrink-0 text-xs">
-                    {currentSide === "left" ? "Mata Kiri" : "Mata Kanan"}
-                  </Badge>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
-                  onClick={toggleFullscreen}
-                  aria-label={isFullscreen ? "Keluar layar penuh" : "Masuk layar penuh"}
-                >
-                  {isFullscreen ? (
-                    <Minimize2 className="h-4 w-4" aria-hidden />
-                  ) : (
-                    <Maximize2 className="h-4 w-4" aria-hidden />
-                  )}
-                </Button>
-                <ThemeToggle />
+          {/* Top Header Navbar */}
+          <NavbarShell className="shrink-0 z-10">
+            <div className="flex items-center gap-3 min-w-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="-ml-1 gap-1.5 text-muted-foreground"
+                onClick={() => {
+                  engineRef.current = null;
+                  setEngineReady(false);
+                  setStep(1);
+                }}
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                <span className="hidden sm:inline">Kembali</span>
+              </Button>
+              <div className="h-4 w-px bg-border" aria-hidden />
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="truncate text-sm font-semibold text-foreground sm:text-base">
+                  Tes Ketajaman Mata
+                </h1>
+                <Badge variant="secondary" className="shrink-0 text-xs">
+                  {currentSide === "left" ? "Mata Kiri" : "Mata Kanan"}
+                </Badge>
               </div>
             </div>
-          </motion.div>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+            </div>
+          </NavbarShell>
 
           {/* Constrained letter stage / transition jeda screen */}
           {showRightEyeTransition ? (
@@ -321,25 +289,48 @@ export default function TestPage() {
             </div>
           ) : (
             <>
-              <div className="fixed inset-x-4 top-24 bottom-48 z-10 flex items-center justify-center overflow-hidden">
+              {/* Center Stage Area */}
+              <main className="flex-1 relative overflow-hidden z-10 flex flex-col items-center justify-center p-4 gap-4">
+                {/* ETDRS Line & Progress Indicator */}
+                {(() => {
+                  const state = engineRef.current?.getState();
+                  const logMAR = state?.logMAR ?? 1.0;
+                  const letterInLine = state?.letterInLine ?? 1;
+                  const lineCorrectCount = state?.lineCorrectCount ?? 0;
+                  return (
+                    <div className="flex items-center gap-2 text-xs font-mono bg-background/80 backdrop-blur border border-border/50 px-4 py-1.5 rounded-full shadow-sm">
+                      <span className="font-semibold text-foreground">
+                        Visus Baris: {toSnellenSix(logMAR)} ({toSnellenFraction(logMAR)})
+                      </span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-muted-foreground">
+                        Huruf {letterInLine} / 5
+                      </span>
+                      <span className="text-muted-foreground">•</span>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        {lineCorrectCount} / 5 Benar
+                      </Badge>
+                    </div>
+                  );
+                })()}
+
                 <div className="relative w-full max-w-lg aspect-square bg-white dark:bg-black rounded-3xl border border-border/50 shadow-2xl flex items-center justify-center select-none p-8">
                   {(() => {
                     const logMAR = engineRef.current?.getState().logMAR ?? 1.0;
-                    const raw = computeLetterPx(
+                    const raw = computeLetterPxPhysical(
                       effDistanceMm,
                       effPxPerMm,
                       logMAR,
                       {
-                        basePx: 28,
-                        minPx: 12,
+                        minPx: 8,
                         maxPx: 350,
                       }
                     );
-                    const size = Number.isFinite(raw) && raw > 0 ? raw : 80;
+                    const size = Number.isFinite(raw) && raw > 0 ? raw : 40;
                     return (
                       <div
                         style={{ fontSize: `${size}px` }}
-                        className="font-mono font-bold leading-none text-black dark:text-white transition-all duration-200"
+                        className="font-optician font-normal leading-none text-black dark:text-white transition-all duration-200 uppercase tracking-normal"
                         role="img"
                         aria-label={`Huruf uji ${letterChar}`}
                       >
@@ -348,51 +339,47 @@ export default function TestPage() {
                     );
                   })()}
                 </div>
-              </div>
+              </main>
 
-              {/* Bottom Panel Overlay */}
-              <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ type: "spring", damping: 28, stiffness: 280, delay: 0.1 }}
-                className="fixed inset-x-0 bottom-0 z-fullscreen-page p-4 flex flex-col md:flex-row justify-between items-end gap-4 pointer-events-none"
-                style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
-              >
-                {/* Left panel: Eye indicator and guide (kiri bawah) */}
-                <div className="pointer-events-auto w-full md:w-80 rounded-2xl border border-border/60 bg-background/80 p-4 shadow-2xl backdrop-blur-xl dark:bg-background/70">
-                  <div>
-                    <Badge variant={currentSide === "left" ? "default" : "destructive"} className="mb-1 text-xs">
-                      {currentSide === "left" ? "PENGUJIAN: MATA KIRI" : "PENGUJIAN: MATA KANAN"}
+              {/* Bottom Control Panel: 4 Objective Multiple-Choice Buttons */}
+              <footer className="w-full border-t border-border bg-background p-4 z-footer shrink-0">
+                <div className="mx-auto flex max-w-4xl flex-col sm:flex-row items-center justify-between gap-4">
+                  {/* Left: Eye guide */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <Badge variant={currentSide === "left" ? "default" : "destructive"} className="text-xs shrink-0">
+                      {currentSide === "left" ? "MATA KIRI" : "MATA KANAN"}
                     </Badge>
-                    <p className="mt-1 text-base font-bold text-foreground">
-                      {currentSide === "left" ? "Tutup Mata Kanan Anda" : "Tutup Mata Kiri Anda"}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Gunakan mata {currentSide === "left" ? "kiri" : "kanan"} untuk membaca huruf di atas.
+                    <p className="text-sm font-medium text-foreground hidden md:block">
+                      Pilih huruf yang Anda lihat di layar:
                     </p>
                   </div>
-                </div>
 
-                {/* Right panel: Action Buttons */}
-                <div className="pointer-events-auto w-full md:w-auto rounded-2xl border border-border/60 bg-background/80 p-4 shadow-2xl backdrop-blur-xl dark:bg-background/70 flex gap-3 items-center justify-end">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="flex-1 sm:flex-initial gap-2 text-destructive border-destructive/20 hover:bg-destructive/10"
-                    onClick={() => handleAnswer(false)}
-                  >
-                    Tidak Terbaca
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="lg"
-                    className="flex-1 sm:flex-initial gap-2 px-8"
-                    onClick={() => handleAnswer(true)}
-                  >
-                    Terbaca
-                  </Button>
+                  {/* Right: 4 Objective Option Buttons + 'Tidak Terlihat' Button */}
+                  <div className="flex flex-col gap-2 w-full sm:w-auto">
+                    <div className="grid grid-cols-4 gap-2.5 w-full sm:w-auto sm:min-w-[340px]">
+                      {options.map((opt) => (
+                        <Button
+                          key={opt}
+                          variant="outline"
+                          size="lg"
+                          className="h-14 text-2xl font-optician font-bold hover:bg-primary hover:text-primary-foreground transition-all border-border/80"
+                          onClick={() => handleSelectOption(opt)}
+                        >
+                          {opt}
+                        </Button>
+                      ))}
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full gap-1.5 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive border border-border/40"
+                      onClick={() => handleSelectOption("__UNREADABLE__")}
+                    >
+                      Huruf Tidak Terlihat / Buram
+                    </Button>
+                  </div>
                 </div>
-              </motion.div>
+              </footer>
             </>
           )}
         </div>
@@ -424,39 +411,82 @@ export default function TestPage() {
           </Card>
         )}
 
-        {/* Step 1: Instructions/Petunjuk di Awal */}
+        {/* Step 1: Calibration & Instructions */}
         {step === 1 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Petunjuk Tes Ketajaman Mata</CardTitle>
+              <CardTitle className="text-2xl">Kalibrasi & Petunjuk Tes (Standar 2 Meter)</CardTitle>
               <CardDescription>
-                Ikuti langkah-langkah di bawah ini untuk mendapatkan hasil skrining yang akurat.
+                Pengujian visus digital dilakukan pada jarak 2 Meter menggunakan huruf standar Snellen (Optician Sans).
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm leading-relaxed text-foreground">
+            <CardContent className="space-y-6 text-sm leading-relaxed text-foreground">
+              {/* Screen Calibration Box */}
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground text-base">
+                    1. Kalibrasi Ukuran Layar (KTP / Kartu Kredit)
+                  </h3>
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {Math.round(pxPerMm * 25.4)} PPI
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Tempelkan kartu KTP / ATM fisik ke layar, lalu geser slider di bawah hingga kotak biru pas persis dengan lebar kartu Anda (85,6 mm).
+                </p>
+
+                {/* Simulated Credit Card box */}
+                <div className="flex flex-col items-center justify-center py-2">
+                  <div
+                    style={{ width: `${cardPx}px`, height: `${cardPx / 1.586}px` }}
+                    className="border-2 border-dashed border-primary bg-primary/10 rounded-lg flex flex-col items-center justify-center transition-all duration-75 text-center p-2"
+                  >
+                    <span className="text-xs font-semibold text-primary">KTP / Kartu Fisik</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">{cardPx} px (85.6 mm)</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Sesuaikan Lebar Kartu</span>
+                    <span>{cardPx} px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={180}
+                    max={500}
+                    value={cardPx}
+                    onChange={(e) => setCardPx(Number(e.target.value))}
+                    className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+                    aria-label="Pengatur ukuran kartu kalibrasi piksel"
+                  />
+                </div>
+
+                <div className="text-xs text-muted-foreground bg-background/50 rounded-lg p-2 flex justify-between font-mono border border-border/40">
+                  <span>Visus 20/20 (6/6) @ 2 Meter:</span>
+                  <span className="font-semibold text-foreground">
+                    2.91 mm (~{Math.round(computeLetterPxPhysical(2000, effPxPerMm, 0))} px)
+                  </span>
+                </div>
+              </div>
+
+              {/* Instructions list */}
               <ol className="list-decimal pl-5 space-y-3">
                 <li>
-                  <strong>Posisikan Jarak:</strong> Jaga jarak mata Anda sekitar <strong>40 cm</strong> (kira-kira sepanjang satu lengan) dari layar.
+                  <strong>Jarak Duduk Wajib:</strong> Ambil jarak tepat <strong>2 Meter (200 cm)</strong> dari monitor komputer Anda.
                 </li>
                 <li>
-                  <strong>Pemeriksaan Satu Mata:</strong> Tes dilakukan secara mandiri untuk masing-masing mata bergantian.
+                  <strong>Huruf Optotipe Snellen:</strong> Tes menggunakan 9 huruf blok presisi kisi 5×5 (C, D, E, F, L, O, P, T, Z).
                 </li>
                 <li>
-                  <strong>Tutup Satu Mata:</strong>
-                  <ul className="list-disc pl-5 mt-1 space-y-1">
-                    <li>Saat menguji <strong>Mata Kiri</strong>: tutup mata kanan Anda menggunakan telapak tangan (tanpa menekan bola mata).</li>
-                    <li>Saat menguji <strong>Mata Kanan</strong>: tutup mata kiri Anda.</li>
+                  <strong>Pemeriksaan Bergantian:</strong>
+                  <ul className="list-disc pl-5 mt-1 space-y-1 text-muted-foreground">
+                    <li>Uji <strong>Mata Kiri</strong> terlebih dahulu (tutup mata kanan dengan telapak tangan).</li>
+                    <li>Lalu dilanjutkan uji <strong>Mata Kanan</strong> (tutup mata kiri).</li>
                   </ul>
                 </li>
                 <li>
-                  <strong>Cara Menjawab:</strong> Sebuah huruf akan muncul di layar.
-                  <ul className="list-disc pl-5 mt-1 space-y-1">
-                    <li>Klik <strong>Terbaca</strong> jika Anda dapat mengenali huruf tersebut dengan jelas.</li>
-                    <li>Klik <strong>Tidak Terbaca</strong> jika huruf terlihat buram atau tidak terbaca.</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Ukuran Huruf Bertahap:</strong> Huruf akan otomatis mengecil bertahap untuk mengukur batas ketajaman mata Anda.
+                  <strong>Cara Menjawab:</strong> Tekan <strong>Terbaca</strong> jika huruf terlihat jelas, atau <strong>Tidak Terbaca</strong> jika buram.
                 </li>
               </ol>
             </CardContent>
@@ -471,7 +501,7 @@ export default function TestPage() {
                 }}
                 className="flex-1"
               >
-                Mulai Sekarang
+                Mulai Tes 2 Meter
               </Button>
             </CardFooter>
           </Card>
@@ -536,28 +566,45 @@ export default function TestPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-md border border-border bg-card p-3">
-                  <p className="text-sm font-medium text-foreground">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="rounded-lg border border-border bg-card p-4 space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     {EYE_LABEL.left}
                   </p>
-                  <p className="text-lg font-semibold text-foreground">
-                    {leftSnellen || "—"}
+                  <p className="text-xl font-bold text-foreground">
+                    {leftResult ? `${leftResult.snellenSix}` : "—"}
+                    <span className="text-sm font-normal text-muted-foreground ml-1.5">
+                      ({leftResult?.snellenFraction ?? "—"})
+                    </span>
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {acuity.left.band}
-                  </p>
+                  <div className="flex justify-between items-center text-xs pt-1 border-t border-border/40">
+                    <span className="text-muted-foreground font-mono">
+                      Desimal: {leftResult?.decimal.toFixed(2) ?? "—"}
+                    </span>
+                    <Badge variant={acuity.left.band === "Normal" ? "outline" : "secondary"}>
+                      {acuity.left.band}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="rounded-md border border-border bg-card p-3">
-                  <p className="text-sm font-medium text-foreground">
+
+                <div className="rounded-lg border border-border bg-card p-4 space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     {EYE_LABEL.right}
                   </p>
-                  <p className="text-lg font-semibold text-foreground">
-                    {rightSnellen || "—"}
+                  <p className="text-xl font-bold text-foreground">
+                    {rightResult ? `${rightResult.snellenSix}` : "—"}
+                    <span className="text-sm font-normal text-muted-foreground ml-1.5">
+                      ({rightResult?.snellenFraction ?? "—"})
+                    </span>
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {acuity.right.band}
-                  </p>
+                  <div className="flex justify-between items-center text-xs pt-1 border-t border-border/40">
+                    <span className="text-muted-foreground font-mono">
+                      Desimal: {rightResult?.decimal.toFixed(2) ?? "—"}
+                    </span>
+                    <Badge variant={acuity.right.band === "Normal" ? "outline" : "secondary"}>
+                      {acuity.right.band}
+                    </Badge>
+                  </div>
                 </div>
               </div>
 

@@ -1,35 +1,21 @@
 /**
- * Adaptive single-letter acuity staircase — PURE state machine.
+ * ETDRS Line-by-Line Visual Acuity Test — PURE state machine.
  *
- * No React, no `window`/`Date.now`/random. Fully deterministic so it is
- * directly unit-testable. The caller (a page component) drives it by calling
- * `answer(correct)` once per presented letter and reads `result()` at the end.
+ * No React, no `window`/`Date.now`/random. Fully deterministic and unit-testable.
+ * Driven by calling `answer(correct)` per presented letter and reading `result()`.
  *
- * ── Staircase rules ──────────────────────────────────────────────────────────
- * • One letter is presented at a time. The current difficulty is `logMAR`.
- * • Start logMAR = 0.0 (20/20). Step = 0.1 logMAR per letter.
- * • Correct answer  → step DOWN by 0.1 (better acuity, smaller letters).
- * • Incorrect answer → step UP   by 0.1 (worse acuity, bigger letters).
- * • Bounds: minLogMAR = -0.3 (best, ~20/10), maxLogMAR = 1.0 (worst, 20/200).
- *   logMAR is clamped to [minLogMAR, maxLogMAR] on every step.
- * • A REVERSAL is a change in stepping direction (correct↔incorrect flip).
- *   The logMAR value AFTER the step that flipped direction is recorded as a
- *   reversal point.
- * • STOP when `maxReversals` reversals have occurred OR when logMAR is pinned
- *   at a bound and the next step in the current direction would not move it.
+ * ── ETDRS Protocol Rules ──────────────────────────────────────────────────────
+ * • Start at logMAR 1.0 (20/200, 6/60). Each line presents 5 letters.
+ * • A line is PASSED if the user gets ≥ 3 out of 5 letters correct (≥ 60%).
+ * • Passed line → advance to the next smaller line (logMAR decreases by 0.1).
+ * • Failed line (< 3/5 correct) → test stops immediately for that eye.
+ * • Minimum logMAR reachable: -0.3 (20/10, 6/3).
  *
- * ── Threshold estimate ───────────────────────────────────────────────────────
- * Standard staircase estimate = the average of the logMAR values recorded at
- * the reversal points AFTER the first reversal (the first reversal lets the
- * staircase settle). If ≤1 reversal occurred (e.g. all-correct or all-incorrect
- * runs that pin a bound, or a monotonic run), the final clamped logMAR is
- * reported instead.
- *
- * ── Conversions (pure math) ───────────────────────────────────────────────────
- *   snellenFraction = "20/" + round(20 · 10^logMAR)
- *   snellenSix      =  "6/" + round( 6 · 10^logMAR)
- *   decimal         = 10^(-logMAR)
- *   band: logMAR ≤ 0.1 → "Normal"; ≤ 0.4 → "Ringan"; else → "Perlu pemeriksaan"
+ * ── ETDRS Letter-Credit Scoring ──────────────────────────────────────────────
+ * • Base acuity = logMAR of the smallest line passed (or startLogMAR if none passed).
+ * • Letter credit = 0.02 logMAR bonus per correct letter on the failed line
+ *   (each letter in a 5-letter line equals 0.1 / 5 = 0.02 logMAR).
+ * • Estimated logMAR = baseLogMAR - (failedLineCorrectCount · 0.02).
  */
 
 export interface AcuityOptions {
@@ -37,31 +23,37 @@ export interface AcuityOptions {
   minLogMAR?: number;
   /** Worst (highest) logMAR reachable. Default 1.0. */
   maxLogMAR?: number;
-  /** logMAR step per answer. Default 0.1. */
+  /** logMAR step per line. Default 0.1. */
   step?: number;
-  /** Stop after this many reversals. Default 6. */
-  maxReversals?: number;
-  /** Starting logMAR. Default 0.0. */
+  /** Letters presented per line. Default 5. */
+  lettersPerLine?: number;
+  /** Passing count threshold per line. Default 3. */
+  passThreshold?: number;
+  /** Starting logMAR difficulty. Default 1.0. */
   startLogMAR?: number;
 }
 
 export interface AcuityState {
-  /** Current logMAR (clamped). */
+  /** Current line logMAR. */
   logMAR: number;
-  /** True once a stop rule fired. */
+  /** 1-indexed letter position in current line (1 to 5). */
+  letterInLine: number;
+  /** Number of correct letters answered in current line so far. */
+  lineCorrectCount: number;
+  /** True once the test is completed (line failed or min logMAR passed). */
   done: boolean;
-  /** Number of direction reversals observed. */
+  /** Reversal count mirror (for backward compatibility). */
   reversals: number;
-  /** Chronological correctness of every answered letter. */
+  /** Chronological record of correctness for every letter. */
   answers: boolean[];
 }
 
 export interface AcuityResult {
-  /** Estimated logMAR (reversal average, or final clamped if ≤1 reversal). */
+  /** Estimated logMAR with ETDRS letter-credit adjustment. */
   logMAR: number;
-  /** Imperial Snellen, e.g. "20/20". */
+  /** Imperial Snellen fraction, e.g. "20/20". */
   snellenFraction: string;
-  /** Metric Snellen, e.g. "6/6". */
+  /** Metric Snellen fraction, e.g. "6/6". */
   snellenSix: string;
   /** Decimal acuity = 10^(-logMAR). */
   decimal: number;
@@ -73,7 +65,9 @@ const DEFAULTS = {
   minLogMAR: -0.3,
   maxLogMAR: 1.0,
   step: 0.1,
-  maxReversals: 6,
+  lettersPerLine: 5,
+  passThreshold: 3,
+  startLogMAR: 1.0,
 } as const;
 
 /** Coerce a possibly-NaN/non-finite logMAR to a safe finite value (0). */
@@ -89,42 +83,40 @@ export function bandForLogMAR(logMAR: number): string {
   return "Perlu pemeriksaan";
 }
 
-/** Pure conversion helpers (exported for reuse / direct testing). */
+/** Pure conversion helpers. */
 export function toSnellenFraction(logMAR: number): string {
   const safe = safeLogMAR(logMAR);
-  return "20/" + Math.round(20 * 10 ** safe);
+  const denom = Math.round(20 * 10 ** safe);
+  return `20/${denom}`;
 }
+
 export function toSnellenSix(logMAR: number): string {
   const safe = safeLogMAR(logMAR);
-  return "6/" + Math.round(6 * 10 ** safe);
+  const denom = Math.round(6 * 10 ** safe);
+  return `6/${denom}`;
 }
+
 export function toDecimal(logMAR: number): number {
   const safe = safeLogMAR(logMAR);
-  return 10 ** -safe;
+  return Number((10 ** -safe).toFixed(2));
 }
 
 /**
- * Create a fresh acuity staircase instance.
- *
- * Returns an object with:
- *  • `answer(correct)` — feed one letter's correctness, returns the new state.
- *  • `getState()`      — snapshot of `{ logMAR, done, reversals, answers }`.
- *  • `result()`        — `{ logMAR, snellenFraction, snellenSix, decimal, band }`.
+ * Create an ETDRS line-by-line acuity test instance.
  */
 export function createAcuityTest(opts: AcuityOptions = {}) {
   const minLogMAR = opts.minLogMAR ?? DEFAULTS.minLogMAR;
   const maxLogMAR = opts.maxLogMAR ?? DEFAULTS.maxLogMAR;
   const step = opts.step ?? DEFAULTS.step;
-  const maxReversals = opts.maxReversals ?? DEFAULTS.maxReversals;
+  const lettersPerLine = opts.lettersPerLine ?? DEFAULTS.lettersPerLine;
+  const passThreshold = opts.passThreshold ?? DEFAULTS.passThreshold;
 
-  let logMAR = opts.startLogMAR ?? 0.0;
+  let logMAR = opts.startLogMAR ?? DEFAULTS.startLogMAR;
   let done = false;
-  let reversals = 0;
+  let lineCorrectCount = 0;
+  let lineTotalCount = 0;
+  let lastPassedLogMAR: number | null = null;
   const answers: boolean[] = [];
-  /** Stepping direction: -1 = down (correct), +1 = up (incorrect), 0 = none yet. */
-  let direction = 0;
-  /** logMAR values recorded at each reversal (after the flipping step). */
-  const reversalLogMARs: number[] = [];
 
   const clamp = (v: number): number =>
     Math.min(maxLogMAR, Math.max(minLogMAR, v));
@@ -132,8 +124,10 @@ export function createAcuityTest(opts: AcuityOptions = {}) {
   function getState(): AcuityState {
     return {
       logMAR,
+      letterInLine: Math.min(lettersPerLine, lineTotalCount + 1),
+      lineCorrectCount,
       done,
-      reversals,
+      reversals: 0,
       answers: [...answers],
     };
   }
@@ -141,23 +135,35 @@ export function createAcuityTest(opts: AcuityOptions = {}) {
   function answer(correct: boolean): AcuityState {
     if (done) return getState();
 
-    const newDirection = correct ? -1 : 1;
-    const prevLogMAR = logMAR;
-    const next = clamp(prevLogMAR + newDirection * step);
-
-    // A reversal = the stepping direction flipped versus the previous answer.
-    if (direction !== 0 && newDirection !== direction) {
-      reversals += 1;
-      reversalLogMARs.push(next);
+    answers.push(correct);
+    lineTotalCount += 1;
+    if (correct) {
+      lineCorrectCount += 1;
     }
 
-    direction = newDirection;
-    logMAR = next;
-    answers.push(correct);
+    // Evaluate line pass / early-fail condition
+    const maxPossibleCorrect = lineCorrectCount + (lettersPerLine - lineTotalCount);
 
-    // Stop rule: exactly 8 trials.
-    if (answers.length >= 8) {
+    if (maxPossibleCorrect < passThreshold) {
+      // Line mathematically cannot pass (e.g. 3 incorrect/unreadable) -> early stop
       done = true;
+    } else if (lineTotalCount >= lettersPerLine) {
+      if (lineCorrectCount >= passThreshold) {
+        // Passed current line
+        lastPassedLogMAR = logMAR;
+        if (logMAR <= minLogMAR) {
+          // Reached smallest line (-0.3)
+          done = true;
+        } else {
+          // Advance to next smaller line
+          logMAR = clamp(Number((logMAR - step).toFixed(2)));
+          lineCorrectCount = 0;
+          lineTotalCount = 0;
+        }
+      } else {
+        // Failed current line -> stop test
+        done = true;
+      }
     }
 
     return getState();
@@ -165,18 +171,20 @@ export function createAcuityTest(opts: AcuityOptions = {}) {
 
   function result(): AcuityResult {
     let estLogMAR: number;
-    if (reversalLogMARs.length > 1) {
-      // Average reversal points AFTER the first reversal (settling skip).
-      const afterFirst = reversalLogMARs.slice(1);
-      estLogMAR =
-        afterFirst.reduce((a, b) => a + b, 0) / afterFirst.length;
+
+    if (lastPassedLogMAR !== null) {
+      // Base = lowest passed line. Credit bonus per correct letter on the failed line.
+      const credit =
+        lineTotalCount > 0 && lineTotalCount < lettersPerLine || (done && lineTotalCount === lettersPerLine && lineCorrectCount < passThreshold)
+          ? lineCorrectCount * (step / lettersPerLine)
+          : 0;
+      estLogMAR = clamp(Number((lastPassedLogMAR - credit).toFixed(3)));
     } else {
-      // ≤1 reversal (monotonic / bound-pinned run): report final clamped logMAR.
-      estLogMAR = logMAR;
+      // No line passed -> base startLogMAR minus letter credits
+      const credit = lineCorrectCount * (step / lettersPerLine);
+      estLogMAR = clamp(Number((logMAR - credit).toFixed(3)));
     }
 
-    // Guard against any non-finite estimate (defensive; should never happen
-    // with the clamped staircase, but guarantees a usable result).
     if (!Number.isFinite(estLogMAR)) estLogMAR = 0;
 
     return {

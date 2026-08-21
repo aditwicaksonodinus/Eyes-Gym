@@ -58,6 +58,9 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        optician: ["'Optician Sans'", "Courier New", "Courier", "monospace"],
+      },
       zIndex: {
         base: "var(--z-base, 0)",
         content: "var(--z-content, 10)",

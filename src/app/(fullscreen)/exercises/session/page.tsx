@@ -27,6 +27,7 @@ import { useTimer } from "@/lib/useTimer";
 import { useAppStore } from "@/store/appStore";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { NavbarShell } from "@/components/navbar";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -167,7 +168,7 @@ function RunningExercise({
 
       {/* ── Top Header Navbar ── */}
       {!focusMode && (
-        <header className="w-full border-b border-border bg-background px-4 py-3 flex items-center justify-between z-navbar shrink-0">
+        <NavbarShell className="shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <Button
               variant="ghost"
@@ -189,22 +190,9 @@ function RunningExercise({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
-              onClick={toggleFullscreen}
-              aria-label={isFullscreen ? "Keluar layar penuh" : "Masuk layar penuh"}
-            >
-              {isFullscreen ? (
-                <Minimize2 className="h-4 w-4" aria-hidden />
-              ) : (
-                <Maximize2 className="h-4 w-4" aria-hidden />
-              )}
-            </Button>
             <ThemeToggle />
           </div>
-        </header>
+        </NavbarShell>
       )}
 
       {/* ── Center stage area (takes remaining space) ── */}

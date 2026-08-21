@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 export type ExerciseCategory = "relaksasi" | "fokus" | "gerakan";
@@ -22,8 +21,6 @@ export interface ExerciseCardProps {
   category: ExerciseCategory;
   duration: string;
   description?: string;
-  /** Completion progress 0-100. */
-  progress?: number;
   className?: string;
 }
 
@@ -39,7 +36,6 @@ export function ExerciseCard({
   category,
   duration,
   description,
-  progress = 0,
   className,
 }: ExerciseCardProps) {
   return (
@@ -53,12 +49,10 @@ export function ExerciseCard({
       </CardHeader>
       <CardContent className="flex-1">
         {description ? (
-          <p className="text-sm font-medium text-muted-foreground">{description}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {description}
+          </p>
         ) : null}
-        <div className="mt-4 space-y-1.5">
-          <Progress value={progress} aria-label={`Progres ${name}`} />
-          <p className="text-xs font-medium text-muted-foreground">{progress}% selesai</p>
-        </div>
       </CardContent>
       <CardFooter>
         <Button asChild variant="outline" className="w-full">

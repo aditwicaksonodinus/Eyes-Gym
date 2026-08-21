@@ -40,6 +40,8 @@ export interface Exercise {
   steps: string[];
   /** i18n key for the long description. */
   descriptionId: string;
+  /** Ringkasan satu kalimat dalam Bahasa Indonesia untuk ditampilkan di kartu latihan. */
+  description: string;
 }
 
 /**
@@ -62,6 +64,7 @@ export const EXERCISES: readonly Exercise[] = [
       "Ulangi siklus kedip–jeda hingga timer habis, 3 siklus.",
     ],
     descriptionId: "exercise.blinking.description",
+    description: "Melatih kebiasaan berkedip penuh untuk melembapkan permukaan mata yang kering akibat terlalu lama menatap layar.",
   },
   {
     slug: "near-far-focus",
@@ -75,6 +78,7 @@ export const EXERCISES: readonly Exercise[] = [
       "Ulangi hingga 10 repetisi.",
     ],
     descriptionId: "exercise.near-far-focus.description",
+    description: "Melatih otot lensa mata berpindah fokus dari jarak dekat ke jauh secara bergantian untuk menjaga kelentukan akomodasi.",
   },
   {
     slug: "figure-8",
@@ -88,6 +92,7 @@ export const EXERCISES: readonly Exercise[] = [
       "Balik arah dan ulangi (2 arah).",
     ],
     descriptionId: "exercise.figure-8.description",
+    description: "Menggerakkan mata mengikuti pola angka 8 untuk melatih koordinasi otot okular di semua arah gerak.",
   },
   {
     slug: "eye-rolling",
@@ -101,6 +106,7 @@ export const EXERCISES: readonly Exercise[] = [
       "Pertahankan kepala tetap diam.",
     ],
     descriptionId: "exercise.eye-rolling.description",
+    description: "Memutar bola mata searah dan berlawanan jarum jam untuk meregangkan semua kelompok otot penggerak mata.",
   },
   {
     slug: "atas-bawah-kiri-kanan",
@@ -114,6 +120,7 @@ export const EXERCISES: readonly Exercise[] = [
       "Mata boleh terbuka atau tertutup.",
     ],
     descriptionId: "exercise.atas-bawah-kiri-kanan.description",
+    description: "Gerakkan mata ke empat arah utama secara perlahan untuk melepaskan kekakuan otot mata akibat fokus statis.",
   },
   {
     slug: "zig-zag",
@@ -126,6 +133,7 @@ export const EXERCISES: readonly Exercise[] = [
       "Lakukan selama 30 detik dengan kepala tetap diam.",
     ],
     descriptionId: "exercise.zig-zag.description",
+    description: "Melatih kemampuan pelacakan visual dengan mengikuti objek yang berpindah secara zigzag, meningkatkan koordinasi mata.",
   },
   {
     slug: "diagonal-gaze",
@@ -139,6 +147,7 @@ export const EXERCISES: readonly Exercise[] = [
       "Balik arah dan ulangi 5–8 repetisi.",
     ],
     descriptionId: "exercise.diagonal-gaze.description",
+    description: "Mengarahkan pandangan secara diagonal ke empat sudut untuk memperkuat otot obliq mata yang jarang terlatih.",
   },
 ];
 

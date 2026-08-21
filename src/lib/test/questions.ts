@@ -1,14 +1,7 @@
 /**
- * Symptom self-report questionnaire for the eye self-check.
+ * Symptom self-report & refractive screening questionnaire.
  *
- * PURE data + a tiny scoring helper. No React, no side effects. The caller
- * (a page component) renders `QUESTIONS` and sums the user's 0–2 answers, then
- * passes the total to `triage()` in ./triage.
- *
- * Scoring bands (total of all answers, each 0–2):
- *   0–2  → "rendah"   (low fatigue)
- *   3–4  → "sedang"  (moderate fatigue)
- *   ≥5   → "tinggi"   (high fatigue)
+ * PURE data + tiny scoring helpers. No React, no side effects.
  */
 
 export interface Question {
@@ -16,10 +9,24 @@ export interface Question {
   id: string;
   /** Indonesian self-report prompt shown to the user. */
   text: string;
+  /** Custom options if different from standard symptom scale. */
+  options?: { label: string; value: number }[];
 }
 
-/** Exactly six fatigue self-report questions (Indonesian). */
+/** Refractive & fatigue self-report questions (Indonesian). */
 export const QUESTIONS: Question[] = [
+  {
+    id: "q_age",
+    text: "Kategori Usia Anda saat ini:",
+    options: [
+      { label: "Di bawah 40 tahun", value: 0 },
+      { label: "40 tahun atau lebih", value: 2 },
+    ],
+  },
+  {
+    id: "q_near",
+    text: "Apakah Anda mengalami kesulitan membaca tulisan kecil pada jarak dekat (sekitar 30 cm)?",
+  },
   {
     id: "q1",
     text: "Apakah mata Anda sering terasa kering atau seperti berpasir?",
@@ -38,19 +45,19 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: "q5",
-    text: "Apakah sulit memfokuskan pandangan ke jarak jauh setelah layar?",
+    text: "Apakah sulit memfokuskan pandangan ke jarak jauh setelah menatap layar?",
   },
   {
     id: "q6",
-    text: "Apakah leher atau bahu terasa tegang setelah beraktivitas layar?",
+    text: "Apakah leher atau bahu terasa tegang setelah beraktivitas di depan layar?",
   },
 ];
 
 export type SymptomBand = "rendah" | "sedang" | "tinggi";
 
-/** Map a summed symptom score (0–12) to a plain-language band. */
+/** Map a summed symptom score to a plain-language band. */
 export function scoreBand(score: number): SymptomBand {
-  if (score <= 2) return "rendah";
-  if (score <= 4) return "sedang";
+  if (score <= 3) return "rendah";
+  if (score <= 6) return "sedang";
   return "tinggi";
 }

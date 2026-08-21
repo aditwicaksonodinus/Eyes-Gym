@@ -15,6 +15,30 @@ const navLinks = [
   { href: "/exercises", label: "Latihan" },
 ] as const;
 
+export function NavbarShell({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <header
+      className={cn(
+        "sticky top-0 z-navbar w-full border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        className
+      )}
+    >
+      <nav
+        className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 h-14"
+        aria-label="Navigasi utama"
+      >
+        {children}
+      </nav>
+    </header>
+  );
+}
+
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
@@ -63,57 +87,52 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-navbar w-full border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <nav
-          className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 h-14"
-          aria-label="Navigasi utama"
+      <NavbarShell>
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-lg font-semibold tracking-wide text-foreground transition-colors hover:text-primary shrink-0"
         >
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-lg font-semibold tracking-wide text-foreground transition-colors hover:text-primary shrink-0"
-          >
-            <Image
-              src="/icon.svg"
-              alt="SeeFit logo"
-              width={24}
-              height={24}
-              className="rounded-md"
-              priority
-            />
-            SeeFit
-          </Link>
+          <Image
+            src="/icon.svg"
+            alt="SeeFit logo"
+            width={24}
+            height={24}
+            className="rounded-md"
+            priority
+          />
+          SeeFit
+        </Link>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <Button
-                key={link.href}
-                asChild
-                variant="ghost"
-                className="text-foreground"
-              >
-                <Link href={link.href}>{link.label}</Link>
-              </Button>
-            ))}
-            <ThemeToggle />
-          </div>
-
-          {/* Mobile Navigation controls */}
-          <div className="flex md:hidden items-center gap-2">
-            <ThemeToggle />
+        {/* Desktop Navigation Links */}
+        <div className="hidden md:flex items-center gap-1">
+          {navLinks.map((link) => (
             <Button
+              key={link.href}
+              asChild
               variant="ghost"
-              size="icon"
-              onClick={() => setIsOpen(!isOpen)}
-              aria-label={isOpen ? "Tutup menu" : "Buka menu"}
-              aria-expanded={isOpen}
               className="text-foreground"
             >
-              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              <Link href={link.href}>{link.label}</Link>
             </Button>
-          </div>
-        </nav>
-      </header>
+          ))}
+          <ThemeToggle />
+        </div>
+
+        {/* Mobile Navigation controls */}
+        <div className="flex md:hidden items-center gap-2">
+          <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label={isOpen ? "Tutup menu" : "Buka menu"}
+            aria-expanded={isOpen}
+            className="text-foreground"
+          >
+            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
+      </NavbarShell>
 
 
       {/* Mobile Drawer — rendered via Portal at document.body to escape header stacking context */}
