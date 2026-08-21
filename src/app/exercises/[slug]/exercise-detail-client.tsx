@@ -234,7 +234,7 @@ function EyeAnimation({
   const transition = motionProps ? { ...motionProps.transition, duration: motionProps.transition.duration * durMult } : undefined;
   const focusClass = "flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/40";
   return (
-      <div className="relative mx-auto aspect-video w-full overflow-hidden rounded-2xl border border-border bg-background lg:mx-0 lg:w-screen lg:max-w-none" role="img" aria-label={`Ilustrasi gerakan mata untuk ${NAME_BY_SLUG[exercise.slug] ?? exercise.slug}`}>
+      <div className="relative mx-auto aspect-video w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-background" role="img" aria-label={`Ilustrasi gerakan mata untuk ${NAME_BY_SLUG[exercise.slug] ?? exercise.slug}`}>
         <TargetWrapper>
         <div className="relative aspect-square h-full bg-secondary">
           {motionProps ? (
