@@ -31,7 +31,7 @@ import {
   computeLetterPxPhysical,
   computePhysicalLetterMm,
 } from "@/lib/test/calibration";
-import { triageAcuity, triage } from "@/lib/test/triage";
+import { triageAcuity, triage, type RefractiveIndication } from "@/lib/test/triage";
 import { QUESTIONS } from "@/lib/test/questions";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -60,6 +60,92 @@ function generateOptions(target: string): string[] {
   const selectedDistractors = shuffledDistractors.slice(0, 3);
   const opts = [target, ...selectedDistractors];
   return opts.sort(() => Math.random() - 0.5);
+}
+
+/** Map refraction category to a Tailwind color scheme. */
+const REFRACTIVE_STYLES: Record<
+  RefractiveIndication["type"],
+  { bg: string; border: string; badge: string; icon: string }
+> = {
+  emmetropia: {
+    bg: "bg-emerald-50 dark:bg-emerald-950/30",
+    border: "border-emerald-200 dark:border-emerald-800",
+    badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+    icon: "🟢",
+  },
+  myopia: {
+    bg: "bg-amber-50 dark:bg-amber-950/30",
+    border: "border-amber-200 dark:border-amber-800",
+    badge: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+    icon: "🟡",
+  },
+  presbyopia: {
+    bg: "bg-blue-50 dark:bg-blue-950/30",
+    border: "border-blue-200 dark:border-blue-800",
+    badge: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    icon: "🔵",
+  },
+  astigmatism: {
+    bg: "bg-purple-50 dark:bg-purple-950/30",
+    border: "border-purple-200 dark:border-purple-800",
+    badge: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+    icon: "🟣",
+  },
+};
+
+/** Refractive Indication Card sub-component rendered in Step 4 results. */
+function RefractiveIndicationCard({
+  indication,
+}: {
+  indication: RefractiveIndication;
+}) {
+  const styles = REFRACTIVE_STYLES[indication.type];
+  return (
+    <div
+      className={`rounded-xl border p-4 space-y-3 ${styles.bg} ${styles.border}`}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-0.5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Indikasi Kelainan Refraksi
+          </p>
+          <p className="text-sm font-bold text-foreground leading-snug">
+            {styles.icon} {indication.label}
+          </p>
+        </div>
+        {indication.severity && (
+          <span
+            className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${styles.badge}`}
+          >
+            {indication.severity}
+          </span>
+        )}
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-current opacity-10" />
+
+      {/* Explanation */}
+      <p className="text-xs text-foreground/80 leading-relaxed">
+        {indication.explanation}
+      </p>
+
+      {/* Recommendation */}
+      <div className="rounded-lg bg-background/60 border border-border/40 px-3 py-2">
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">
+          Rekomendasi
+        </p>
+        <p className="text-xs text-foreground leading-relaxed">
+          {indication.recommendation}
+        </p>
+      </div>
+
+      <p className="text-[10px] italic text-muted-foreground">
+        ⚠️ Indikasi ini bukan diagnosis medis. Konsultasikan dengan dokter mata atau optometris untuk uji lensa subjektif (phoropter).
+      </p>
+    </div>
+  );
 }
 
 export default function TestPage() {
@@ -104,7 +190,7 @@ export default function TestPage() {
 
   // Initialize the engine when we first enter the acuity step.
   React.useEffect(() => {
-    if (step === 2 && engineRef.current === null) {
+    if (step === 3 && engineRef.current === null) {
       startEye("left");
     }
   }, [step, startEye]);
@@ -130,7 +216,7 @@ export default function TestPage() {
         } else {
           setRightLogMAR(res.logMAR);
           setRightResult(res);
-          setStep(3);
+          setStep(4);
         }
       } else {
         const nextTarget = SNELLEN[Math.floor(Math.random() * SNELLEN.length)];
@@ -143,8 +229,15 @@ export default function TestPage() {
 
   // ── Step 3: symptom questionnaire ──────────────────────────────────────────
   const [answers, setAnswers] = React.useState<Record<string, number>>({});
+
+  // Refractive screening fields (not counted in fatigue symptom score)
+  const ageScore = answers["q_age"] ?? 0;
+  const nearDifficultyScore = answers["q_near"] ?? 0;
+
+  // Fatigue symptom score — excludes the two refractive screening questions
+  const REFRACTIVE_IDS = new Set(["q_age", "q_near"]);
   const symptomScore = QUESTIONS.reduce(
-    (sum, q) => sum + (answers[q.id] ?? 0),
+    (sum, q) => (REFRACTIVE_IDS.has(q.id) ? sum : sum + (answers[q.id] ?? 0)),
     0,
   );
 
@@ -157,7 +250,7 @@ export default function TestPage() {
       })),
       completedAt: Date.now(),
     });
-    setStep(4);
+    setStep(2); // Kuesioner done → go to Kalibrasi
   }, [answers, symptomScore]);
 
   // ── Step 4: result (computed once both eyes + score are known) ────────────
@@ -166,7 +259,9 @@ export default function TestPage() {
       ? triageAcuity({ leftLogMAR, rightLogMAR })
       : null;
   const triageResult =
-    acuity !== null ? triage({ acuity, symptomScore }) : null;
+    acuity !== null
+      ? triage({ acuity, symptomScore, ageScore, nearDifficultyScore })
+      : null;
 
   // Record a "value moment" exactly once when the result is shown.
   const recordedRef = React.useRef(false);
@@ -203,8 +298,8 @@ export default function TestPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      {/* Step 2: Fullscreen Acuity Test (1-to-1 layout mirroring Gym style) */}
-      {step === 2 && engineReady && (
+      {/* Step 3: Fullscreen Acuity Test (1-to-1 layout mirroring Gym style) */}
+      {step === 3 && engineReady && (
         <div className="fixed inset-0 z-fullscreen-page bg-background flex flex-col overflow-hidden">
           {/* Background Stage */}
           <div className="absolute inset-0 bg-secondary/40 dark:bg-secondary/20 z-0 pointer-events-none" />
@@ -219,7 +314,7 @@ export default function TestPage() {
                 onClick={() => {
                   engineRef.current = null;
                   setEngineReady(false);
-                  setStep(1);
+                  setStep(2); // Back to Kalibrasi
                 }}
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden />
@@ -269,7 +364,7 @@ export default function TestPage() {
                       engineRef.current = null;
                       setEngineReady(false);
                       setShowRightEyeTransition(false);
-                      setStep(1);
+                      setStep(2); // Back to Kalibrasi
                     }}
                     className="flex-1"
                   >
@@ -358,11 +453,11 @@ export default function TestPage() {
                   <div className="flex flex-col gap-2 w-full sm:w-auto">
                     <div className="grid grid-cols-4 gap-2.5 w-full sm:w-auto sm:min-w-[340px]">
                       {options.map((opt) => (
-                        <Button
+                      <Button
                           key={opt}
                           variant="outline"
                           size="lg"
-                          className="h-14 text-2xl font-optician font-bold hover:bg-primary hover:text-primary-foreground transition-all border-border/80"
+                          className="h-14 text-2xl font-bold hover:bg-primary hover:text-primary-foreground transition-all border-border/80 font-sans"
                           onClick={() => handleSelectOption(opt)}
                         >
                           {opt}
@@ -405,17 +500,107 @@ export default function TestPage() {
             </CardContent>
             <CardFooter>
               <Button onClick={() => setStep(1)} className="w-full">
-                Mulai Tes
+                Mulai — Isi Kuesioner Dulu
               </Button>
             </CardFooter>
           </Card>
         )}
-
-        {/* Step 1: Calibration & Instructions */}
+        {/* Step 1: Questionnaire (moved before calibration as initial diagnosis) */}
         {step === 1 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Kalibrasi & Petunjuk Tes (Standar 2 Meter)</CardTitle>
+              <CardTitle className="text-2xl">Kuesioner Gejala Awal</CardTitle>
+              <CardDescription>
+                Jawab beberapa pertanyaan sebelum tes visual — untuk diagnosa awal kondisi mata Anda.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {QUESTIONS.map((q) => {
+                // Refractive screening questions: binary custom options
+                const isRefractiveQ = q.id === "q_age" || q.id === "q_near";
+                if (isRefractiveQ && q.options) {
+                  return (
+                    <fieldset key={q.id} className="space-y-2">
+                      <legend className="text-sm font-medium text-foreground">
+                        {q.text}
+                      </legend>
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        {q.options.map((opt) => (
+                          <Button
+                            key={opt.label}
+                            type="button"
+                            size="sm"
+                            className="w-full text-xs sm:text-sm py-2 h-auto"
+                            variant={
+                              (answers[q.id] ?? -1) === opt.value
+                                ? "default"
+                                : "outline"
+                            }
+                            onClick={() =>
+                              setAnswers((prev) => ({ ...prev, [q.id]: opt.value }))
+                            }
+                            aria-pressed={(answers[q.id] ?? -1) === opt.value}
+                          >
+                            {opt.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  );
+                }
+
+                // Standard 3-option fatigue questions
+                return (
+                  <fieldset key={q.id} className="space-y-2">
+                    <legend className="text-sm font-medium text-foreground">
+                      {q.text}
+                    </legend>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+                      {SYMPTOM_LABELS.map((label, value) => (
+                        <Button
+                          key={label}
+                          type="button"
+                          size="sm"
+                          className="w-full text-xs sm:text-sm py-2 h-auto"
+                          variant={
+                            (answers[q.id] ?? 0) === value
+                              ? "default"
+                              : "outline"
+                          }
+                          onClick={() =>
+                            setAnswers((prev) => ({ ...prev, [q.id]: value }))
+                          }
+                          aria-pressed={(answers[q.id] ?? 0) === value}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+                  </fieldset>
+                );
+              })}
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3">
+              <div className="flex w-full gap-3">
+                <Button variant="outline" onClick={() => setStep(0)} className="flex-1">
+                  Kembali
+                </Button>
+                <Button onClick={handleSubmitQuestionnaire} className="flex-1">
+                  Lanjut ke Kalibrasi
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Skor gejala lelah: {symptomScore} / 12
+              </p>
+            </CardFooter>
+          </Card>
+        )}
+
+        {/* Step 2: Calibration & Instructions */}
+        {step === 2 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Kalibrasi &amp; Petunjuk Tes (Standar 2 Meter)</CardTitle>
               <CardDescription>
                 Pengujian visus digital dilakukan pada jarak 2 Meter menggunakan huruf standar Snellen (Optician Sans).
               </CardDescription>
@@ -491,13 +676,13 @@ export default function TestPage() {
               </ol>
             </CardContent>
             <CardFooter className="flex gap-3">
-              <Button variant="outline" onClick={() => setStep(0)} className="flex-1">
+              <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
                 Kembali
               </Button>
               <Button
                 onClick={() => {
                   startEye("left");
-                  setStep(2);
+                  setStep(3);
                 }}
                 className="flex-1"
               >
@@ -517,38 +702,74 @@ export default function TestPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              {QUESTIONS.map((q) => (
-                <fieldset key={q.id} className="space-y-2">
-                  <legend className="text-sm font-medium text-foreground">
-                    {q.text}
-                  </legend>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
-                    {SYMPTOM_LABELS.map((label, value) => (
-                      <Button
-                        key={label}
-                        type="button"
-                        size="sm"
-                        className="w-full text-xs sm:text-sm py-2 h-auto"
-                        variant={
-                          (answers[q.id] ?? 0) === value
-                            ? "default"
-                            : "outline"
-                        }
-                        onClick={() =>
-                          setAnswers((prev) => ({ ...prev, [q.id]: value }))
-                        }
-                        aria-pressed={(answers[q.id] ?? 0) === value}
-                      >
-                        {label}
-                      </Button>
-                    ))}
-                  </div>
-                </fieldset>
-              ))}
+              {QUESTIONS.map((q) => {
+                // Refractive screening questions: binary custom options
+                const isRefractiveQ = q.id === "q_age" || q.id === "q_near";
+                if (isRefractiveQ && q.options) {
+                  return (
+                    <fieldset key={q.id} className="space-y-2">
+                      <legend className="text-sm font-medium text-foreground">
+                        {q.text}
+                      </legend>
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        {q.options.map((opt) => (
+                          <Button
+                            key={opt.label}
+                            type="button"
+                            size="sm"
+                            className="w-full text-xs sm:text-sm py-2 h-auto"
+                            variant={
+                              (answers[q.id] ?? -1) === opt.value
+                                ? "default"
+                                : "outline"
+                            }
+                            onClick={() =>
+                              setAnswers((prev) => ({ ...prev, [q.id]: opt.value }))
+                            }
+                            aria-pressed={(answers[q.id] ?? -1) === opt.value}
+                          >
+                            {opt.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  );
+                }
+
+                // Standard 3-option fatigue questions
+                return (
+                  <fieldset key={q.id} className="space-y-2">
+                    <legend className="text-sm font-medium text-foreground">
+                      {q.text}
+                    </legend>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+                      {SYMPTOM_LABELS.map((label, value) => (
+                        <Button
+                          key={label}
+                          type="button"
+                          size="sm"
+                          className="w-full text-xs sm:text-sm py-2 h-auto"
+                          variant={
+                            (answers[q.id] ?? 0) === value
+                              ? "default"
+                              : "outline"
+                          }
+                          onClick={() =>
+                            setAnswers((prev) => ({ ...prev, [q.id]: value }))
+                          }
+                          aria-pressed={(answers[q.id] ?? 0) === value}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+                  </fieldset>
+                );
+              })}
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <p className="text-xs text-muted-foreground">
-                Skor gejala: {symptomScore} / 12
+                Skor gejala lelah: {symptomScore} / 12
               </p>
               <Button onClick={handleSubmitQuestionnaire} className="w-full">
                 Lihat Hasil
@@ -556,6 +777,9 @@ export default function TestPage() {
             </CardFooter>
           </Card>
         )}
+
+        {/* Step 3: (formerly step 3) the questionnaire is now step 1;
+             this conditional is now only step 4: Results */}
 
         {step === 4 && acuity && triageResult && (
           <Card>
@@ -608,6 +832,9 @@ export default function TestPage() {
                 </div>
               </div>
 
+              {/* Refractive Indication Card */}
+              <RefractiveIndicationCard indication={triageResult.refractiveIndication} />
+
               <p className="text-sm leading-relaxed text-foreground">
                 {triageResult.message}
               </p>
@@ -621,9 +848,9 @@ export default function TestPage() {
               {triageResult.cta === null && (
                 <p
                   role="alert"
-                  className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground"
+                  className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive"
                 >
-                  Segera periksa ke dokter mata.
+                  ⚠️ Segera periksa ke dokter mata untuk pemeriksaan menyeluruh.
                 </p>
               )}
 

@@ -14,24 +14,33 @@ describe("TestPage (/test wizard)", () => {
     ).toBeInTheDocument();
   });
 
-  it("advances from disclaimer (step 0) through instructions (step 1) to acuity test (step 2)", async () => {
+  it("advances from intro (step 0) through questionnaire (step 1) then calibration (step 2) to acuity test (step 3)", async () => {
     const user = userEvent.setup();
     render(<TestPage />);
 
-    // Step 0: disclaimer only — test buttons not yet present.
+    // Step 0: intro — test buttons not yet present.
     expect(
       screen.queryByRole("button", { name: "Terbaca" }),
     ).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Mulai Tes" }));
+    // Click the CTA on step 0 to go to questionnaire (step 1)
+    await user.click(
+      screen.getByRole("button", { name: /Mulai/i }),
+    );
 
-    // Step 1: instructions page is shown. Start button is now present.
+    // Step 1: questionnaire — kalibrasi button not yet present, Lanjut ke Kalibrasi is present.
+    const lanjutButton = screen.getByRole("button", { name: /Lanjut ke Kalibrasi/i });
+    expect(lanjutButton).toBeInTheDocument();
+
+    await user.click(lanjutButton);
+
+    // Step 2: calibration — "Mulai Tes 2 Meter" is now present.
     const startNowButton = screen.getByRole("button", { name: /Mulai Tes 2 Meter/i });
     expect(startNowButton).toBeInTheDocument();
 
     await user.click(startNowButton);
 
-    // Step 2: acuity test 4-choice buttons, unreadable button, and letter image are visible.
+    // Step 3: acuity test 4-choice buttons, unreadable button, and letter image are visible.
     expect(
       await screen.findByRole("img", { name: /Huruf uji/i }),
     ).toBeInTheDocument();
