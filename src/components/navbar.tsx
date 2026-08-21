@@ -110,8 +110,10 @@ export function Navbar() {
       {/* Slide-out Sidebar container */}
       <div
         className={cn(
-          "fixed right-0 top-0 bottom-0 z-sidebar w-72 bg-background border-l border-border p-6 shadow-2xl flex flex-col gap-6 transition-transform duration-300 ease-in-out md:hidden",
-          isOpen ? "translate-x-0" : "translate-x-full"
+          "fixed right-0 top-0 bottom-0 z-sidebar w-72 bg-background border-l border-border p-6 shadow-2xl flex flex-col gap-6 transition-all duration-300 ease-in-out md:hidden transform",
+          isOpen
+            ? "translate-x-0 opacity-100"
+            : "translate-x-full opacity-0 pointer-events-none invisible"
         )}
       >
         {/* Sidebar Header inside drawer */}
