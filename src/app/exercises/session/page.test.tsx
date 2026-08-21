@@ -14,12 +14,12 @@ describe("exercises/session page", () => {
 
     // First exercise name should NOT be visible before starting.
     expect(
-      screen.queryByText("Aturan 20-20-20"),
+      screen.queryByText("Kedip Cepat"),
     ).not.toBeInTheDocument();
 
     await user.click(startButton);
 
-    // After starting, the first exercise (20-20-20) name appears.
-    expect(screen.getByText("Aturan 20-20-20")).toBeInTheDocument();
+    // After starting, the first exercise (blinking) name appears.
+    expect(screen.getByText("Kedip Cepat")).toBeInTheDocument();
   });
 });

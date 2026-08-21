@@ -3,7 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { Eye, Play, RotateCcw, CheckCircle2, ListChecks } from "lucide-react";
+import {
+  Activity,
+  Eye,
+  Play,
+  RotateCcw,
+  CheckCircle2,
+  ListChecks,
+  Target,
+} from "lucide-react";
 
 import { createSessionMachine } from "@/lib/gym/sessionMachine";
 import {
@@ -26,14 +34,11 @@ import {
 
 /** Indonesian display names (registry only carries i18n keys). */
 const NAME_BY_SLUG: Record<string, string> = {
-  "20-20-20": "Aturan 20-20-20",
-  palming: "Palming",
   blinking: "Kedip Cepat",
   "near-far-focus": "Fokus Dekat–Jauh",
   "figure-8": "Angka 8",
   "eye-rolling": "Menggulung Mata",
   "atas-bawah-kiri-kanan": "Atas–Bawah & Kiri–Kanan",
-  "pencil-push-up": "Pencil Push-up",
   "zig-zag": "Zig-Zag",
   "diagonal-gaze": "Tatapan Diagonal",
 };
@@ -45,7 +50,20 @@ function displayName(ex: Exercise): string {
 /**
  * Inline, lightweight Framer Motion eye-movement animation keyed by category.
  * Kept in this file on purpose — no shared animation component.
+ * Focus object is a square (rounded-lg) with a contrasting primary fill + icon.
  */
+function CategoryIcon({
+  category,
+  className,
+}: {
+  category: Exercise["category"];
+  className?: string;
+}) {
+  if (category === "relaksasi") return <Eye className={className} aria-hidden />;
+  if (category === "fokus") return <Target className={className} aria-hidden />;
+  return <Activity className={className} aria-hidden />;
+}
+
 function EyeAnimation({
   category,
   reduce,
@@ -53,34 +71,33 @@ function EyeAnimation({
   category: Exercise["category"];
   reduce: boolean | null;
 }) {
+  const focus =
+    "flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/40";
+
   if (category === "relaksasi") {
     // Gentle breathing pulse — calm the eyes.
     return (
       <motion.div
-        className="h-28 w-28 rounded-full bg-calm-400/30 ring-4 ring-calm-500/20"
+        className={focus}
         animate={reduce ? {} : { scale: [1, 1.18, 1], opacity: [0.55, 1, 0.55] }}
         transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-      />
+      >
+        <CategoryIcon category={category} className="h-6 w-6" />
+      </motion.div>
     );
   }
 
   if (category === "fokus") {
-    // Near/far focus: a dot that drifts between close (small, center) and far.
+    // Near/far focus: a square that drifts between close (small) and far (large).
     return (
       <div className="relative flex h-28 w-28 items-center justify-center">
         <motion.div
-          className="h-16 w-16 rounded-full bg-calm-500 shadow-lg shadow-calm-500/30"
-          animate={
-            reduce
-              ? {}
-              : {
-                  scale: [0.45, 1.5, 0.45],
-                  x: [0, 0, 0],
-                  y: [0, 0, 0],
-                }
-          }
+          className={focus}
+          animate={reduce ? {} : { scale: [0.45, 1.5, 0.45] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        />
+        >
+          <CategoryIcon category={category} className="h-6 w-6" />
+        </motion.div>
       </div>
     );
   }
@@ -88,9 +105,9 @@ function EyeAnimation({
   // gerakan — trace a figure-8 / circular pattern.
   return (
     <div className="relative flex h-28 w-28 items-center justify-center">
-      <div className="absolute h-20 w-20 rounded-full border border-dashed border-calm-500/40" />
+      <div className="absolute h-20 w-20 rounded-lg border border-dashed border-primary/40" />
       <motion.div
-        className="h-12 w-12 rounded-full bg-calm-500 shadow-lg shadow-calm-500/30"
+        className={focus}
         animate={
           reduce
             ? {}
@@ -100,7 +117,9 @@ function EyeAnimation({
               }
         }
         transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-      />
+      >
+        <CategoryIcon category={category} className="h-6 w-6" />
+      </motion.div>
     </div>
   );
 }
