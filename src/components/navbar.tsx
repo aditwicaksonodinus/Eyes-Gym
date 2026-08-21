@@ -76,22 +76,37 @@ export function Navbar() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 top-14 z-30 bg-background/60 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm md:hidden animate-in fade-in"
             onClick={() => setIsOpen(false)}
           />
           {/* Slide-out Sidebar container */}
           <div
             className={cn(
-              "fixed right-0 top-14 bottom-0 z-30 w-64 bg-background border-l border-border p-6 shadow-2xl flex flex-col gap-4 transition-all duration-300 md:hidden animate-in slide-in-from-right"
+              "fixed right-0 top-0 bottom-0 z-[60] w-72 bg-background border-l border-border p-6 shadow-2xl flex flex-col gap-6 transition-all duration-300 md:hidden animate-in slide-in-from-right"
             )}
           >
+            {/* Sidebar Header inside drawer */}
+            <div className="flex items-center justify-between border-b border-border/40 pb-4 shrink-0">
+              <span className="font-semibold text-foreground text-sm">Navigasi</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOpen(false)}
+                aria-label="Tutup menu"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Navigation Links */}
             <div className="flex flex-col gap-2">
               {navLinks.map((link) => (
                 <Button
                   key={link.href}
                   asChild
                   variant="ghost"
-                  className="w-full justify-start text-foreground text-sm font-medium"
+                  className="w-full justify-start text-foreground text-sm font-medium h-10 px-3"
                   onClick={() => setIsOpen(false)}
                 >
                   <Link href={link.href}>{link.label}</Link>
