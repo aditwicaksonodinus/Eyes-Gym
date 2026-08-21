@@ -14,14 +14,11 @@ import {
 
 /** Indonesian display names (registry only stores i18n keys). */
 const NAME_BY_SLUG: Record<string, string> = {
-  "20-20-20": "Aturan 20-20-20",
-  palming: "Palming",
   blinking: "Kedip Cepat",
   "near-far-focus": "Fokus Dekat–Jauh",
   "figure-8": "Angka 8",
   "eye-rolling": "Menggulung Mata",
   "atas-bawah-kiri-kanan": "Atas–Bawah & Kiri–Kanan",
-  "pencil-push-up": "Pencil Push-up",
   "zig-zag": "Zig-Zag",
   "diagonal-gaze": "Tatapan Diagonal",
 };
