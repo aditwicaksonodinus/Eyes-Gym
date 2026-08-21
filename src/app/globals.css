@@ -33,6 +33,18 @@
     --input: 170 18% 84%;
     --ring: 174 55% 38%;
 
+    /* Calm teal scale — theme-aware so dark mode stays low-contrast/eye-friendly */
+    --calm-50: 166 76% 97%;
+    --calm-100: 167 85% 92%;
+    --calm-200: 167 85% 85%;
+    --calm-300: 167 84% 74%;
+    --calm-400: 167 79% 52%;
+    --calm-500: 173 80% 40%;
+    --calm-600: 174 72% 33%;
+    --calm-700: 175 77% 26%;
+    --calm-800: 176 70% 23%;
+    --calm-900: 175 69% 19%;
+
     --radius: 0.75rem;
   }
 
@@ -65,6 +77,18 @@
     --border: 164 12% 20%;
     --input: 164 12% 20%;
     --ring: 173 45% 45%;
+
+    /* Calm teal scale (dark) — softer, lower-saturation to avoid eye strain */
+    --calm-50: 170 30% 14%;
+    --calm-100: 170 35% 16%;
+    --calm-200: 168 45% 70%;
+    --calm-300: 168 50% 62%;
+    --calm-400: 170 55% 52%;
+    --calm-500: 172 58% 46%;
+    --calm-600: 173 52% 40%;
+    --calm-700: 174 48% 34%;
+    --calm-800: 175 44% 28%;
+    --calm-900: 176 40% 18%;
   }
 
   * {
