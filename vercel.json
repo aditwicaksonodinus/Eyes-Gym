@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "alias": "seefit",
+  "alias": "seefit-eyes",
   "headers": [
     {
       "source": "/sw.js",
