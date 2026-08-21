@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "alias": "seefit",
   "headers": [
     {
       "source": "/sw.js",

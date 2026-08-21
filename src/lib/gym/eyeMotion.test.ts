@@ -69,7 +69,7 @@ describe("eyeMotion", () => {
   });
 
   it("pins the exact per-slug gerakan keyframe arrays (current authoritative shape)", () => {
-    const cases: Array<{ slug: string; x: string[]; y: string[] }> = [
+    const cases: Array<{ slug: string; x: string[]; y: string[]; duration?: number }> = [
       {
         slug: "figure-8",
         x: ["0%", "44%", "44%", "0%", "-44%", "-44%", "0%"],
@@ -77,8 +77,9 @@ describe("eyeMotion", () => {
       },
       {
         slug: "atas-bawah-kiri-kanan",
-        x: ["0%", "0%", "0%", "-44%", "44%", "0%"],
-        y: ["-44%", "44%", "0%", "0%", "0%", "0%"],
+        x: ["0%", "0%", "0%", "0%", "0%", "-44%", "0%", "44%", "0%"],
+        y: ["0%", "-44%", "0%", "44%", "0%", "0%", "0%", "0%", "0%"],
+        duration: 8,
       },
       {
         slug: "zig-zag",
@@ -91,10 +92,13 @@ describe("eyeMotion", () => {
         y: ["-44%", "44%", "-44%", "44%", "44%", "-44%", "-44%", "44%"],
       },
     ];
-    for (const { slug, x, y } of cases) {
+    for (const { slug, x, y, duration } of cases) {
       const motion = buildEyeMotion(makeExercise(slug, "gerakan"), false)!;
       expect(motion.animate.x).toEqual(x);
       expect(motion.animate.y).toEqual(y);
+      if (duration !== undefined) {
+        expect(motion.transition.duration).toBe(duration);
+      }
     }
   });
 

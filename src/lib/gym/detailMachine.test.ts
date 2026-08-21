@@ -132,19 +132,20 @@ describe("createDetailMachine (pure, one-exercise lifecycle, fake clock)", () =>
 
   it("rep-based: completing N reps reaches done with remainingReps 0", () => {
     const clock = makeFakeClock();
-    const ex = getExercise("atas-bawah-kiri-kanan")!; // reps = 3 (fixed)
+    const ex = getExercise("atas-bawah-kiri-kanan")!; // reps = 10 (fixed)
     const m = createDetailMachine(ex, { clock: clock.now });
 
-    expect(m.getState().remainingReps).toBe(3);
+    expect(m.getState().remainingReps).toBe(10);
     expect(m.getState().status).toBe("idle");
 
     m.start();
     m.completeRep();
-    expect(m.getState().remainingReps).toBe(2);
+    expect(m.getState().remainingReps).toBe(9);
     expect(m.getState().done).toBe(false);
 
-    m.completeRep();
-    m.completeRep();
+    for (let i = 0; i < 9; i++) {
+      m.completeRep();
+    }
     const s = m.getState();
     expect(s.remainingReps).toBe(0);
     expect(s.done).toBe(true);

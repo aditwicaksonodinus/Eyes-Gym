@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   RotateCcw,
+  MonitorOff,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -154,6 +155,22 @@ export default function TestPage() {
   // ── Wizard navigation ──────────────────────────────────────────────────────
   const [step, setStep] = React.useState(0);
 
+  // ── Desktop detection ──────────────────────────────────────────────────────
+  const [isMobileDevice, setIsMobileDevice] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    const checkDevice = () => {
+      const isSmallScreen = window.innerWidth < 1024;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+      setIsMobileDevice(isSmallScreen || isMobileUA);
+    };
+    checkDevice();
+    window.addEventListener("resize", checkDevice);
+    return () => window.removeEventListener("resize", checkDevice);
+  }, []);
+
   // ── Step 1: Calibration (fixed 2 meters distance, card calibration) ───────
   const [cardPx, setCardPx] = React.useState(310);
   const distanceCm = 200; // Lock distance to 2 meters (200 cm)
@@ -295,6 +312,50 @@ export default function TestPage() {
         animate: { opacity: 1, y: 0 },
         transition: { duration: 0.25, ease: "easeOut" as const },
       };
+
+  if (isMobileDevice === null) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center text-muted-foreground text-sm">
+        Mendeteksi perangkat...
+      </div>
+    );
+  }
+
+  if (isMobileDevice) {
+    return (
+      <div className="mx-auto max-w-md p-4">
+        <Card className="border-destructive/20 bg-destructive/5 dark:bg-destructive/10">
+          <CardHeader className="text-center pb-2">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <MonitorOff className="h-6 w-6" aria-hidden="true" />
+            </div>
+            <CardTitle className="text-xl font-bold text-foreground">
+              Monitor Desktop Diperlukan
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-1">
+              Jarak Uji 2 Meter & Akurasi Kalibrasi
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-foreground/90 leading-relaxed text-center">
+            <p>
+              Demi akurasi pengukuran tajam penglihatan, pengujian visus Snellen digital ini <strong>hanya boleh dilakukan di layar monitor desktop atau laptop (layar besar)</strong>.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Layar ponsel atau tablet terlalu kecil untuk menampilkan huruf Snellen yang terkalibrasi secara presisi dari jarak 2 meter.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-2 pt-2">
+            <Button asChild className="w-full">
+              <Link href="/">Kembali ke Beranda</Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/exercises">Lihat Latihan Mata</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -452,9 +513,9 @@ export default function TestPage() {
                   {/* Right: 4 Objective Option Buttons + 'Tidak Terlihat' Button */}
                   <div className="flex flex-col gap-2 w-full sm:w-auto">
                     <div className="grid grid-cols-4 gap-2.5 w-full sm:w-auto sm:min-w-[340px]">
-                      {options.map((opt) => (
-                      <Button
-                          key={opt}
+                      {options.map((opt, index) => (
+                        <Button
+                          key={index}
                           variant="outline"
                           size="lg"
                           className="h-14 text-2xl font-bold hover:bg-primary hover:text-primary-foreground transition-all border-border/80 font-sans"

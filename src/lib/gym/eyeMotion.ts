@@ -65,7 +65,7 @@ export function circleKeyframes(radiusPct: number, points = 16): {
  * | near-far-focus (fokus) |  5.0 s   |
  * | figure-8               |  7.0 s   |
  * | eye-rolling            |  8.0 s   |
- * | atas-bawah-kiri-kanan  |  5.0 s   |
+ * | atas-bawah-kiri-kanan  |  7.0 s   |
  * | zig-zag                |  6.0 s   |
  * | diagonal-gaze          |  6.0 s   |
  */
@@ -120,13 +120,13 @@ export function buildEyeMotion(ex: Exercise, reduce: boolean): EyeMotion | null 
       };
 
     case "atas-bawah-kiri-kanan":
-      // 5 s — shorter because this pattern has fewer keyframes (up/down/left/right).
+      // 8 s — traces a clean "+" pattern with center resets between all directions to prevent diagonal sweeps.
       return {
         animate: {
-          x: ["0%", "0%", "0%", "-44%", "44%", "0%"],
-          y: ["-44%", "44%", "0%", "0%", "0%", "0%"],
+          x: ["0%", "0%", "0%", "0%", "0%", "-44%", "0%", "44%", "0%"],
+          y: ["0%", "-44%", "0%", "44%", "0%", "0%", "0%", "0%", "0%"],
         },
-        transition: { duration: 5, repeat: Number.POSITIVE_INFINITY, ease },
+        transition: { duration: 8, repeat: Number.POSITIVE_INFINITY, ease },
       };
 
     case "zig-zag":

@@ -80,8 +80,8 @@ describe("exercise registry", () => {
       expect(repBounds("eye-rolling")).toEqual({ min: 5, max: 8 });
     });
 
-    it("Gerakan Atas-Bawah & Kiri-Kanan = 3 repetisi per arah", () => {
-      expect(repBounds("atas-bawah-kiri-kanan")).toEqual({ min: 3, max: 3 });
+    it("Gerakan Atas-Bawah & Kiri-Kanan = 10 repetisi per arah", () => {
+      expect(repBounds("atas-bawah-kiri-kanan")).toEqual({ min: 10, max: 10 });
     });
 
     it("Zig-Zag = 30 detik", () => {
