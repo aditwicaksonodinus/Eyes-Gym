@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
@@ -35,6 +34,7 @@ import {
 import { createDetailMachine, type DetailMachine } from "@/lib/gym/detailMachine";
 import { useTimer } from "@/lib/useTimer";
 import { useAppStore } from "@/store/appStore";
+import { cn } from "@/lib/utils";
 
 /** Indonesian display names (registry only stores i18n keys — no dictionary yet). */
 const NAME_BY_SLUG: Record<string, string> = {
@@ -196,192 +196,166 @@ function BottomPanel({
   selanjutnyaHref,
 }: Omit<PanelProps, "onCompleteRep">) {
   const [collapsed, setCollapsed] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const totalDuration = isRepBased ? durationMax * repTarget : durationMax;
 
-  return (
-    <motion.div
-      initial={{ y: 100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ type: "spring", damping: 28, stiffness: 280, delay: 0.1 }}
-      className="fixed inset-x-0 bottom-0 z-50 p-4 flex flex-col md:flex-row justify-between items-end gap-4 pointer-events-none"
-      style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
-    >
-      {done ? (
-        /* ── Done state ── */
-        <div className="pointer-events-auto mx-auto w-full max-w-md rounded-2xl border border-border/60 bg-background/80 p-6 text-center shadow-2xl backdrop-blur-xl dark:bg-background/70">
-          <div className="flex flex-col items-center gap-4 py-2">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15">
-              <CheckCircle2 className="h-8 w-8 text-primary" aria-hidden />
-            </div>
-            <div>
-              <p className="text-xl font-semibold text-foreground">
-                Latihan selesai!
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Mata Anda baru saja mendapat jeda yang menyegarkan.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Button asChild size="lg" className="gap-2">
-                <Link href={selanjutnyaHref}>
-                  Selanjutnya
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="gap-2"
-                onClick={onReset}
-              >
-                <RotateCcw className="h-4 w-4" aria-hidden />
-                Ulangi
-              </Button>
-            </div>
-          </div>
+  return done ? (
+    /* ── Done state ── */
+    <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 py-2 pointer-events-auto">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 shrink-0">
+          <CheckCircle2 className="h-5 w-5 text-primary" aria-hidden />
         </div>
-      ) : (
-        /* ── Active state: Split layouts ── */
-        <>
-          {/* Left panel: Info and Progress */}
-          <div className="pointer-events-auto w-full md:w-80 rounded-2xl border border-border/60 bg-background/80 p-4 shadow-2xl backdrop-blur-xl dark:bg-background/70">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                {CATEGORY_LABEL[exercise.category]}
-              </p>
-              <p className="mt-0.5 text-base font-semibold text-foreground">
-                {name}
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {motionHint(exercise)}
-              </p>
-            </div>
+        <div className="text-left">
+          <p className="font-semibold text-foreground text-sm md:text-base">
+            Latihan selesai!
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Mata Anda baru saja mendapat jeda yang menyegarkan.
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 ml-auto sm:ml-0">
+        <Button asChild size="sm" className="gap-1.5 h-9 text-xs">
+          <Link href={selanjutnyaHref}>
+            Selanjutnya
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5 h-9 text-xs"
+          onClick={onReset}
+        >
+          <RotateCcw className="h-4 w-4" aria-hidden />
+          Ulangi
+        </Button>
+      </div>
+    </div>
+  ) : (
+    /* ── Active state ── */
+    <div className="w-full flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 pointer-events-auto">
+      {/* Section 1: Info */}
+      <div className="flex flex-row md:flex-col items-center md:items-start justify-between md:justify-center gap-1 shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-foreground text-sm md:text-base">{name}</span>
+          <Badge variant="secondary" className="text-[10px] md:text-xs">
+            {CATEGORY_LABEL[exercise.category]}
+          </Badge>
+        </div>
+        <p className="text-xs text-muted-foreground hidden md:block">
+          {motionHint(exercise)}
+        </p>
+      </div>
 
-            <div className="mt-4 space-y-2">
-              {isRepBased ? (
-                <>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-xs text-muted-foreground">Progres Latihan</span>
-                    <div className="flex items-baseline gap-1">
-                      <span
-                        className="text-2xl font-bold tabular-nums text-foreground"
-                        data-testid="fullscreen-reps"
-                      >
-                        {remainingReps}
-                      </span>
-                      <span className="text-xs text-muted-foreground">sisa rep</span>
-                    </div>
-                  </div>
-                  <Progress
-                    value={Math.round((completedReps / repTarget) * 100)}
-                    aria-label="Progres repetisi"
-                  />
-                </>
-              ) : (
-                <>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-xs text-muted-foreground">Progres Waktu</span>
-                    <span
-                      className="text-2xl font-bold tabular-nums text-foreground"
-                      data-testid="fullscreen-countdown"
-                    >
-                      {formatTime(timer.remainingSec)}
-                    </span>
-                  </div>
-                  <Progress
-                    value={
-                      durationMax > 0
-                        ? Math.round(
-                            ((durationMax - timer.remainingSec) / durationMax) * 100,
-                          )
-                        : 0
-                    }
-                    aria-label="Progres waktu"
-                  />
-                </>
-              )}
-            </div>
-          </div>
+      {/* Section 2: Progress (Reps/Timer and Progress Bar) */}
+      <div className="flex-1 max-w-lg flex flex-col gap-1.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Progres {isRepBased ? "Latihan" : "Waktu"}</span>
+          <span className="font-bold text-foreground tabular-nums">
+            {isRepBased ? `${remainingReps} sisa rep` : formatTime(timer.remainingSec)}
+          </span>
+        </div>
+        <Progress
+          value={
+            isRepBased
+              ? Math.round((completedReps / repTarget) * 100)
+              : durationMax > 0
+              ? Math.round(((durationMax - timer.remainingSec) / durationMax) * 100)
+              : 0
+          }
+          className="h-1.5"
+          aria-label="Progres latihan"
+        />
+      </div>
 
-          {/* Right panel: Controls */}
-          <div className="pointer-events-auto w-full md:w-auto rounded-2xl border border-border/60 bg-background/80 p-4 shadow-2xl backdrop-blur-xl dark:bg-background/70 flex flex-col sm:flex-row gap-3 items-center">
-            {/* Speed selector (figure-8 only) */}
-            {exercise.slug === "figure-8" && (
-              <div className="flex items-center gap-2 border-r border-border/40 pr-3 mr-1">
-                <span className="text-xs text-muted-foreground">Kecepatan:</span>
-                {(["slow", "normal", "fast"] as const).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => onSetSpeed(s)}
-                    aria-pressed={speed === s}
-                    className={
-                      "rounded-full border px-2.5 py-0.5 text-xs transition-colors " +
-                      (speed === s
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background/60 text-muted-foreground hover:text-foreground")
-                    }
-                  >
-                    {s === "slow" ? "Lambat" : s === "fast" ? "Cepat" : "Normal"}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center gap-2">
-              {timer.running ? (
-                <Button onClick={timer.pause} size="sm" className="gap-2">
-                  <Pause className="h-4 w-4" aria-hidden />
-                  Jeda
-                </Button>
-              ) : timer.remainingSec < totalDuration ? (
-                <Button onClick={timer.resume} size="sm" className="gap-2">
-                  <Play className="h-4 w-4" aria-hidden />
-                  Lanjutkan
-                </Button>
-              ) : (
-                <Button onClick={onStart} size="sm" className="gap-2">
-                  <Play className="h-4 w-4" aria-hidden />
-                  Mulai
-                </Button>
-              )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={onReset}
-              >
-                <RotateCcw className="h-4 w-4" aria-hidden />
-                Ulangi
-              </Button>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                className="gap-2"
-                onClick={onComplete}
-                data-testid="selesai-button"
-              >
-                <CheckCircle2 className="h-4 w-4" aria-hidden />
-                Selesai
-              </Button>
-
+      {/* Section 3: Controls */}
+      <div className="flex flex-wrap items-center justify-between md:justify-end gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-border/20">
+        {/* Speed Selector (only figure-8) */}
+        {exercise.slug === "figure-8" && (
+          <div className="flex items-center gap-1.5 mr-2">
+            <span className="text-[10px] md:text-xs text-muted-foreground hidden sm:inline">Kecepatan:</span>
+            {(["slow", "normal", "fast"] as const).map((s) => (
               <button
+                key={s}
                 type="button"
-                onClick={onOpenInstructions}
-                aria-label="Cara melakukan latihan ini"
-                className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground h-9"
+                onClick={() => onSetSpeed(s)}
+                className={
+                  "rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors " +
+                  (speed === s
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background/60 text-muted-foreground")
+                }
               >
-                <BookOpen className="h-3.5 w-3.5" aria-hidden />
-                Cara?
+                {s === "slow" ? "Lambat" : s === "fast" ? "Cepat" : "Normal"}
               </button>
-            </div>
+            ))}
           </div>
-        </>
-      )}
-    </motion.div>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-1.5 ml-auto">
+          {timer.running ? (
+            <Button onClick={timer.pause} size="sm" className="gap-1 h-8 text-xs px-2.5">
+              <Pause className="h-3.5 w-3.5" aria-hidden />
+              Jeda
+            </Button>
+          ) : timer.remainingSec < totalDuration ? (
+            <Button onClick={timer.resume} size="sm" className="gap-1 h-8 text-xs px-2.5">
+              <Play className="h-3.5 w-3.5" aria-hidden />
+              Mulai
+            </Button>
+          ) : (
+            <Button onClick={onStart} size="sm" className="gap-1 h-8 text-xs px-2.5">
+              <Play className="h-3.5 w-3.5" aria-hidden />
+              Mulai
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 h-8 text-xs px-2"
+            onClick={onReset}
+            aria-label="Ulangi latihan"
+          >
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-1 h-8 text-xs px-2.5"
+            onClick={onComplete}
+            data-testid="selesai-button"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+            Selesai
+          </Button>
+
+          <button
+            type="button"
+            onClick={onOpenInstructions}
+            aria-label="Cara melakukan latihan ini"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-medium border border-border rounded-full px-2.5 py-1 bg-background/60 h-8 shrink-0 animate-none"
+          >
+            <BookOpen className="h-3.5 w-3.5" aria-hidden />
+            Cara?
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -417,52 +391,44 @@ function TopHeader({
   };
 
   return (
-    <motion.div
-      initial={{ y: -60, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ type: "spring", damping: 28, stiffness: 280 }}
-      className="fixed inset-x-0 top-0 z-50"
-      style={{ paddingTop: "env(safe-area-inset-top)" }}
-    >
-      <div className="mx-3 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-background/80 px-4 py-2.5 shadow-lg shadow-black/5 backdrop-blur-xl dark:bg-background/70">
-        <div className="flex items-center gap-3 min-w-0">
-          <Button asChild variant="ghost" size="sm" className="-ml-1 gap-1.5 text-muted-foreground">
-            <Link href="/exercises" aria-label="Kembali ke daftar latihan">
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              <span className="hidden sm:inline">Kembali</span>
-            </Link>
-          </Button>
+    <header className="w-full border-b border-border bg-background px-4 py-3 flex items-center justify-between z-40 shrink-0">
+      <div className="flex items-center gap-3 min-w-0">
+        <Button asChild variant="ghost" size="sm" className="-ml-1 gap-1.5 text-muted-foreground">
+          <Link href="/exercises" aria-label="Kembali ke daftar latihan">
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">Kembali</span>
+          </Link>
+        </Button>
 
-          <div className="h-4 w-px bg-border" aria-hidden />
+        <div className="h-4 w-px bg-border" aria-hidden />
 
-          <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate text-sm font-semibold text-foreground sm:text-base">
-              {name}
-            </h1>
-            <Badge variant="secondary" className="shrink-0 text-xs">
-              {CATEGORY_LABEL[category]}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
-            onClick={toggleFullscreen}
-            aria-label={isFullscreen ? "Keluar layar penuh" : "Masuk layar penuh"}
-          >
-            {isFullscreen ? (
-              <Minimize2 className="h-4 w-4" aria-hidden />
-            ) : (
-              <Maximize2 className="h-4 w-4" aria-hidden />
-            )}
-          </Button>
-          <ThemeToggle />
+        <div className="flex min-w-0 items-center gap-2">
+          <h1 className="truncate text-sm font-semibold text-foreground sm:text-base">
+            {name}
+          </h1>
+          <Badge variant="secondary" className="shrink-0 text-[10px] md:text-xs">
+            {CATEGORY_LABEL[category]}
+          </Badge>
         </div>
       </div>
-    </motion.div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
+          onClick={toggleFullscreen}
+          aria-label={isFullscreen ? "Keluar layar penuh" : "Masuk layar penuh"}
+        >
+          {isFullscreen ? (
+            <Minimize2 className="h-4 w-4" aria-hidden />
+          ) : (
+            <Maximize2 className="h-4 w-4" aria-hidden />
+          )}
+        </Button>
+        <ThemeToggle />
+      </div>
+    </header>
   );
 }
 
@@ -471,8 +437,7 @@ function TopHeader({
 export function ExerciseDetailClient({ slug }: { slug: string }) {
   const reduceMotion = useReducedMotion() ?? false;
 
-  const exercise = getExercise(slug);
-  if (!exercise) notFound();
+  const exercise = getExercise(slug)!;
 
   const index = EXERCISES.findIndex((e) => e.slug === exercise.slug);
   const nextSlug =
@@ -489,6 +454,7 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
   const [done, setDone] = React.useState(false);
   const [speed, setSpeed] = React.useState<"normal" | "fast" | "slow">("normal");
   const [instructionsOpen, setInstructionsOpen] = React.useState(false);
+  const [focusMode, setFocusMode] = React.useState(false);
 
   if (machineRef.current === null) {
     machineRef.current = createDetailMachine(exercise, {
@@ -543,17 +509,15 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
   const name = NAME_BY_SLUG[exercise.slug] ?? exercise.slug;
 
   return (
-    <>
-      {/* Soft teal/green viewport background as per spec §6, now full-bleed */}
-      <div className="fixed inset-0 bg-secondary/40 dark:bg-secondary/20 z-0 pointer-events-none" />
+    <div className="h-full w-full flex flex-col overflow-hidden bg-background relative">
+      {/* Soft teal/green viewport background as per spec §6 */}
+      <div className="absolute inset-0 bg-secondary/40 dark:bg-secondary/20 z-0 pointer-events-none" />
 
-      {/* ── Animation stage parent (constrained to keep target within visible zone) ── */}
-      <div
-        className="fixed inset-x-0 top-24 bottom-48 z-0 overflow-hidden"
-        role="img"
-        aria-label={`Ilustrasi gerakan mata untuk ${name}`}
-      >
-        {/* Animation stage */}
+      {/* ── Top Header Navbar ── */}
+      {!focusMode && <TopHeader name={name} category={exercise.category} />}
+
+      {/* ── Center stage area (takes remaining vertical space) ── */}
+      <main className="flex-1 relative overflow-hidden z-10 flex items-center justify-center">
         <EyeStage
           exercise={exercise}
           reduceMotion={reduceMotion || !timer.running}
@@ -563,30 +527,48 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
           onExit={() => {}}
           name={name}
         />
-      </div>
 
-      {/* ── Top header overlay ── */}
-      <TopHeader name={name} category={exercise.category} />
+        {/* ── Focus Mode Toggle Button ── */}
+        <button
+          type="button"
+          onClick={() => setFocusMode(!focusMode)}
+          aria-label={focusMode ? "Tampilkan semua kontrol" : "Fokus penuh (sembunyikan kontrol)"}
+          className={cn(
+            "pointer-events-auto absolute z-50 flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-lg backdrop-blur transition-all duration-300 hover:bg-background bottom-4 right-4",
+            focusMode ? "opacity-50 hover:opacity-100" : "opacity-80 hover:opacity-100"
+          )}
+        >
+          {focusMode ? (
+            <Minimize2 className="h-4 w-4" />
+          ) : (
+            <Maximize2 className="h-4 w-4" />
+          )}
+        </button>
+      </main>
 
-      {/* ── Bottom glass panel ── */}
-      <BottomPanel
-        exercise={exercise}
-        name={name}
-        isRepBased={isRepBased}
-        durationMax={durationMax}
-        repTarget={repTarget}
-        completedReps={completedReps}
-        remainingReps={remainingReps}
-        timer={timer}
-        done={done}
-        speed={speed}
-        onSetSpeed={setSpeed}
-        onStart={handleStart}
-        onReset={handleReset}
-        onComplete={() => machineRef.current?.complete()}
-        onOpenInstructions={() => setInstructionsOpen(true)}
-        selanjutnyaHref={selanjutnyaHref}
-      />
+      {/* ── Bottom Navbar (Footer) ── */}
+      {!focusMode && (
+        <footer className="w-full border-t border-border bg-background p-4 z-40 shrink-0">
+          <BottomPanel
+            exercise={exercise}
+            name={name}
+            isRepBased={isRepBased}
+            durationMax={durationMax}
+            repTarget={repTarget}
+            completedReps={completedReps}
+            remainingReps={remainingReps}
+            timer={timer}
+            done={done}
+            speed={speed}
+            onSetSpeed={setSpeed}
+            onStart={handleStart}
+            onReset={handleReset}
+            onComplete={() => machineRef.current?.complete()}
+            onOpenInstructions={() => setInstructionsOpen(true)}
+            selanjutnyaHref={selanjutnyaHref}
+          />
+        </footer>
+      )}
 
       {/* ── Instructions drawer ── */}
       <InstructionsDrawer
@@ -594,7 +576,7 @@ export function ExerciseDetailClient({ slug }: { slug: string }) {
         onClose={() => setInstructionsOpen(false)}
         steps={exercise.steps}
       />
-    </>
+    </div>
   );
 }
 

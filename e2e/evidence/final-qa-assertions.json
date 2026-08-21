@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-08-21T08:08:28.269Z",
+  "url": "http://localhost:3000/exercises/zig-zag",
+  "targetBoxSelector": "[role=\"img\"][aria-label^=\"Ilustrasi gerakan mata\"]",
+  "cardSelector": "div.rounded-lg.border (closest)",
+  "assertion": [
+    "docOk: document.documentElement.scrollWidth <= document.documentElement.clientWidth",
+    "inCardOk: box.left >= card.left - 0.5 && box.right <= card.right + 0.5",
+    "inViewportXOk: box.left >= 0 && box.right <= clientWidth + 0.5"
+  ],
+  "verdict": "APPROVE",
+  "viewports": [
+    {
+      "viewport": "1280x900",
+      "boxLeft": 304,
+      "boxRight": 976,
+      "boxTop": 284,
+      "boxBottom": 662,
+      "cardLeft": 16,
+      "cardRight": 1264,
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "docOk": true,
+      "inCardOk": true,
+      "inViewportXOk": true
+    },
+    {
+      "viewport": "375x667",
+      "boxLeft": 41,
+      "boxRight": 334,
+      "boxTop": 316,
+      "boxBottom": 481,
+      "cardLeft": 16,
+      "cardRight": 359,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "docOk": true,
+      "inCardOk": true,
+      "inViewportXOk": true
+    }
+  ]
+}

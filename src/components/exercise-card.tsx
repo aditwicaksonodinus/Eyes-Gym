@@ -49,15 +49,15 @@ export function ExerciseCard({
           <CardTitle className="text-lg">{name}</CardTitle>
           <Badge variant="secondary">{categoryLabel[category]}</Badge>
         </div>
-        <CardDescription>{duration}</CardDescription>
+        <CardDescription className="font-medium">{duration}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1">
         {description ? (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm font-medium text-muted-foreground">{description}</p>
         ) : null}
         <div className="mt-4 space-y-1.5">
           <Progress value={progress} aria-label={`Progres ${name}`} />
-          <p className="text-xs text-muted-foreground">{progress}% selesai</p>
+          <p className="text-xs font-medium text-muted-foreground">{progress}% selesai</p>
         </div>
       </CardContent>
       <CardFooter>

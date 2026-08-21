@@ -25,6 +25,7 @@ import {
 } from "@/lib/exercises";
 import { useTimer } from "@/lib/useTimer";
 import { useAppStore } from "@/store/appStore";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -110,6 +111,8 @@ function RunningExercise({
   const totalDurationSec = isRepBased ? durationMax * repTarget : durationMax;
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -119,6 +122,15 @@ function RunningExercise({
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
   }, []);
 
   const toggleFullscreen = () => {
@@ -149,19 +161,13 @@ function RunningExercise({
       : 0;
 
   return (
-    <>
-      {/* Fullscreen background */}
-      <div className="fixed inset-0 bg-secondary/40 dark:bg-secondary/20 z-0 pointer-events-none" />
+    <div className="h-full w-full flex flex-col overflow-hidden bg-background relative">
+      {/* Soft teal/green background */}
+      <div className="absolute inset-0 bg-secondary/40 dark:bg-secondary/20 z-0 pointer-events-none" />
 
-      {/* Top Header overlay */}
-      <motion.div
-        initial={{ y: -60, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", damping: 28, stiffness: 280 }}
-        className="fixed inset-x-0 top-0 z-50"
-        style={{ paddingTop: "env(safe-area-inset-top)" }}
-      >
-        <div className="mx-3 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-background/80 px-4 py-2.5 shadow-lg shadow-black/5 backdrop-blur-xl dark:bg-background/70">
+      {/* ── Top Header Navbar ── */}
+      {!focusMode && (
+        <header className="w-full border-b border-border bg-background px-4 py-3 flex items-center justify-between z-40 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <Button
               variant="ghost"
@@ -177,7 +183,7 @@ function RunningExercise({
               <h1 className="truncate text-sm font-semibold text-foreground sm:text-base">
                 {displayName(exercise)}
               </h1>
-              <Badge variant="secondary" className="shrink-0 text-xs">
+              <Badge variant="secondary" className="shrink-0 text-[10px] md:text-xs">
                 Latihan {index + 1} dari {total}
               </Badge>
             </div>
@@ -198,15 +204,11 @@ function RunningExercise({
             </Button>
             <ThemeToggle />
           </div>
-        </div>
-      </motion.div>
+        </header>
+      )}
 
-      {/* Constrained animation stage viewport */}
-      <div
-        className="fixed inset-x-0 top-24 bottom-48 z-0 overflow-hidden"
-        role="img"
-        aria-label={`Ilustrasi gerakan mata untuk ${displayName(exercise)}`}
-      >
+      {/* ── Center stage area (takes remaining space) ── */}
+      <main className="flex-1 relative overflow-hidden z-10 flex items-center justify-center">
         <EyeStage
           exercise={exercise}
           reduceMotion={reduce || !timer.running}
@@ -216,84 +218,124 @@ function RunningExercise({
           onExit={() => {}}
           name={displayName(exercise)}
         />
-      </div>
 
-      {/* Bottom panel */}
-      <motion.div
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", damping: 28, stiffness: 280, delay: 0.1 }}
-        className="fixed inset-x-0 bottom-0 z-50 p-4 flex flex-col md:flex-row justify-between items-end gap-4 pointer-events-none"
-        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
-      >
-        {/* Left panel: Info & Progress (kiri bawah) */}
-        <div className="pointer-events-auto w-full md:w-80 rounded-2xl border border-border/60 bg-background/80 p-4 shadow-2xl backdrop-blur-xl dark:bg-background/70">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-              {CATEGORY_LABEL[exercise.category]}
-            </p>
-            <p className="mt-0.5 text-base font-semibold text-foreground">
-              {displayName(exercise)}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {motionHint(exercise)}
-            </p>
-          </div>
-
-          <div className="mt-4 space-y-2">
-            {isRepBased ? (
-              <>
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-xs text-muted-foreground">Progres Latihan</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold tabular-nums text-foreground">
-                      {remainingReps}
-                    </span>
-                    <span className="text-xs text-muted-foreground">sisa rep</span>
-                  </div>
-                </div>
-                <Progress value={progressValue} aria-label="Progres repetisi" />
-              </>
-            ) : (
-              <>
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-xs text-muted-foreground">Progres Waktu</span>
-                  <span className="text-2xl font-bold tabular-nums text-foreground">
-                    {formatTime(timer.remainingSec)}
-                  </span>
-                </div>
-                <Progress value={progressValue} aria-label="Progres waktu" />
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Right panel: Controls */}
-        <div className="pointer-events-auto w-full md:w-auto rounded-2xl border border-border/60 bg-background/80 p-4 shadow-2xl backdrop-blur-xl dark:bg-background/70 flex gap-3 items-center justify-end">
-          {timer.running ? (
-            <Button onClick={timer.pause} size="sm" className="gap-2">
-              <Pause className="h-4 w-4" aria-hidden />
-              Jeda
-            </Button>
-          ) : (
-            <Button onClick={timer.resume} size="sm" className="gap-2">
-              <Play className="h-4 w-4" aria-hidden />
-              Mulai
-            </Button>
+        {/* ── Focus Mode Toggle Button ── */}
+        <button
+          type="button"
+          onClick={() => setFocusMode(!focusMode)}
+          aria-label={focusMode ? "Tampilkan semua kontrol" : "Fokus penuh (sembunyikan kontrol)"}
+          className={cn(
+            "pointer-events-auto absolute z-50 flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-lg backdrop-blur transition-all duration-300 hover:bg-background bottom-4 right-4",
+            focusMode ? "opacity-50 hover:opacity-100" : "opacity-80 hover:opacity-100"
           )}
+        >
+          {focusMode ? (
+            <Minimize2 className="h-4 w-4" />
+          ) : (
+            <Maximize2 className="h-4 w-4" />
+          )}
+        </button>
+      </main>
 
-          <Button variant="outline" size="sm" className="gap-2" onClick={timer.reset}>
-            <RotateCcw className="h-4 w-4" aria-hidden />
-            Ulangi
-          </Button>
+      {/* ── Bottom Navbar (Footer) ── */}
+      {!focusMode && (
+        <footer className="w-full border-t border-border bg-background p-4 z-40 shrink-0">
+          <div className="w-full flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 pointer-events-auto">
+            {/* Section 1: Info */}
+            <div className="flex flex-row md:flex-col items-center md:items-start justify-between md:justify-center gap-1 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-foreground text-sm md:text-base">
+                  {displayName(exercise)}
+                </span>
+                <Badge variant="secondary" className="text-[10px] md:text-xs">
+                  {CATEGORY_LABEL[exercise.category]}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground hidden md:block">
+                {motionHint(exercise)}
+              </p>
+            </div>
 
-          <Button variant="secondary" size="sm" className="gap-2" onClick={onDone}>
-            <CheckCircle2 className="h-4 w-4" aria-hidden />
-            Selesai
-          </Button>
-        </div>
-      </motion.div>
-    </>
+            {/* Section 2: Progress (Reps/Timer and Progress Bar) */}
+            <div className="flex-1 max-w-lg flex flex-col gap-1.5">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Progres {isRepBased ? "Latihan" : "Waktu"}</span>
+                <span className="font-bold text-foreground tabular-nums">
+                  {isRepBased ? `${remainingReps} sisa rep` : formatTime(timer.remainingSec)}
+                </span>
+              </div>
+              <Progress value={progressValue} className="h-1.5" aria-label="Progres latihan" />
+            </div>
+
+            {/* Section 3: Controls */}
+            <div className="flex items-center justify-between md:justify-end gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-border/20">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold md:hidden">
+                Latihan {index + 1} dari {total}
+              </span>
+
+              <div className="flex items-center gap-1.5 ml-auto">
+                {timer.running ? (
+                  <Button onClick={timer.pause} size="sm" className="gap-1 h-8 text-xs px-2.5">
+                    <Pause className="h-3.5 w-3.5" aria-hidden />
+                    Jeda
+                  </Button>
+                ) : (
+                  <Button onClick={timer.resume} size="sm" className="gap-1 h-8 text-xs px-2.5">
+                    <Play className="h-3.5 w-3.5" aria-hidden />
+                    Mulai
+                  </Button>
+                )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 h-8 text-xs px-2"
+                  onClick={timer.reset}
+                  aria-label="Ulangi latihan"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-1 h-8 text-xs px-2.5"
+                  onClick={onDone}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                  Selesai
+                </Button>
+              </div>
+            </div>
+          </div>
+        </footer>
+      )}
+
+      {/* ── Focus Mode Toggle Button ── */}
+      <button
+        type="button"
+        onClick={() => setFocusMode(!focusMode)}
+        aria-label={focusMode ? "Tampilkan semua kontrol" : "Fokus penuh (sembunyikan kontrol)"}
+        className={cn(
+          "pointer-events-auto fixed z-50 flex h-10 items-center gap-1.5 rounded-full border border-border/80 bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-lg backdrop-blur transition-all duration-300 hover:bg-background",
+          focusMode
+            ? "bottom-4 right-4 opacity-50 hover:opacity-100"
+            : "bottom-[5.5rem] right-4 md:bottom-24 md:right-auto md:left-4"
+        )}
+      >
+        {focusMode ? (
+          <>
+            <Minimize2 className="h-3.5 w-3.5" />
+            Tampilkan Kontrol
+          </>
+        ) : (
+          <>
+            <Maximize2 className="h-3.5 w-3.5" />
+            Fokus Penuh
+          </>
+        )}
+      </button>
+    </div>
   );
 }
 

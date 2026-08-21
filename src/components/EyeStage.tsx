@@ -61,11 +61,11 @@ export function EyeStage({
 
   const ariaName = name ?? NAME_BY_SLUG[exercise.slug] ?? exercise.slug;
   const focusClass =
-    "flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 ring-4 ring-primary/20";
+    "flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 ring-4 ring-primary/20 transition-all duration-300";
 
   const focusIcon = (
     <span className={focusClass}>
-      <span className="h-2.5 w-2.5 rounded-full bg-primary-foreground" />
+      <FocusIcon slug={exercise.slug} className="h-6 w-6 text-primary-foreground" />
     </span>
   );
 

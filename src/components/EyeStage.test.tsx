@@ -83,7 +83,7 @@ describe("EyeStage", () => {
     );
     expect(centering).not.toBeNull();
     expect(
-      centering!.querySelector(".flex.h-8.w-8.items-center.justify-center"),
+      centering!.querySelector(".flex.h-14.w-14.items-center.justify-center"),
     ).not.toBeNull();
     // The inner moving stage is a plain div: buildEyeMotion returns null for
     // reduce=true, so no framer-motion `style` (motion.div sets a
@@ -108,7 +108,7 @@ describe("EyeStage", () => {
     const stage = field!.querySelector("div.absolute.inset-0") as HTMLElement | null;
     expect(stage).not.toBeNull();
     expect(
-      stage!.querySelector(".flex.h-8.w-8.items-center.justify-center"),
+      stage!.querySelector(".flex.h-14.w-14.items-center.justify-center"),
     ).not.toBeNull();
     // No framer-motion style when reduceMotion = true
     expect(stage!.hasAttribute("style")).toBe(false);
